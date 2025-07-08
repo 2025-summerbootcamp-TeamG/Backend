@@ -1,0 +1,16 @@
+name: 🎨 Design
+description: 퍼블리싱 또는 UI 디자인 작업
+labels: ["🎨 Design"]
+body:
+  - type: textarea
+    id: design-task
+    attributes:
+      label: 어떤 디자인 작업인가요?
+      placeholder: 버튼 스타일 수정, 반응형 적용 등
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: 참고자료
+      placeholder: 예) 디자인 시스템, 피그마 링크 등

@@ -1,0 +1,20 @@
+name: 🛠 Fix
+description: 버그 수정
+labels: ["🛠 Fix"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 😥 어떤 버그인가요?
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: 버그 설명
+      placeholder: 어떤 상황에서 문제가 발생했는지 자세히 작성해주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: error-log
+    attributes:
+      label: 에러 로그나 캡처
+      placeholder: 에러 메시지나 화면 캡처를 붙여넣어 주세요.

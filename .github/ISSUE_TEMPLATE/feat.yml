@@ -1,0 +1,20 @@
+name: 🚀 Feat
+description: 기능 구현 및 수정
+labels: ["🚀 Feat"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ✨ 구현 할 기능
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: 어떤 기능을 구현하나요?
+      placeholder: 예) 로그인 기능에 자동 로그인 추가
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: 관련 참고자료나 링크
+      placeholder: 관련 문서나 캡처가 있다면 추가해주세요

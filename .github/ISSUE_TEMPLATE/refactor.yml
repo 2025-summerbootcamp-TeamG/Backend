@@ -1,0 +1,16 @@
+name: 🧹 Refactor
+description: 코드 리팩토링
+labels: ["🧹 Refactor"]
+body:
+  - type: textarea
+    id: reason
+    attributes:
+      label: 어떤 이유로 리팩토링 하나요?
+      placeholder: 예) 중복 코드 제거, 가독성 향상 등
+    validations:
+      required: true
+  - type: textarea
+    id: what-changed
+    attributes:
+      label: 리팩토링 내용
+      placeholder: 무엇을 어떻게 리팩토링했는지 작성해주세요

@@ -1,0 +1,16 @@
+name: 🧭 Chore
+description: 개발 환경 설정 관련 작업
+labels: ["🧭 Chore"]
+body:
+  - type: textarea
+    id: task-detail
+    attributes:
+      label: 어떤 작업인가요?
+      placeholder: 예) ESLint 설정 추가, 패키지 설치 등
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: 참고자료
+      placeholder: 문서, 링크 등
