@@ -1,0 +1,8 @@
+# 장고 백엔드 서버를 Docker에서 실행하기 위한 python패키지 목록을 담는 파일
+
+Django>=4.2,<5.0
+gunicorn>=20.1.0
+boto3>=1.28         # AWS Rekognition 호출용
+Pillow>=10.0        # 이미지 업로드/처리 (장고에서 이미지 필드 사용할 경우)
+djangorestframework # REST API 작성에 필요 (Django REST Framework)
+python-decouple     # .env 파일에 aws 키 등 민감 정보 분리 가능
