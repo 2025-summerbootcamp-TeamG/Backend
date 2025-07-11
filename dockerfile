@@ -1,6 +1,6 @@
 FROM python:3.10-slim
 
-# .pyc같이 불필요한 캐시 파일이 생기지 않도록 방지
+#  .pyc같이 불필요한 캐시 파일이 생기지 않도록 방지
 ENV PYTHONDONTWRITEBYTECODE 1 
 # 파이썬 출력을 버퍼링 없이 즉시 출력하게 함 
 ENV PYTHONUNBUFFERED 1
