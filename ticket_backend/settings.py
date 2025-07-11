@@ -71,7 +71,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ticket_backend.wsgi.application'
 
-# MySQL 데이터베이스 연결 (docker-compose와 연동)
+# ✅ MySQL 데이터베이스 연결 (docker-compose와 연동)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -104,6 +104,6 @@ STATIC_ROOT = BASE_DIR / 'static'
 # 기본 PK 필드
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# AWS Rekognition용 환경변수 불러오기
+# ✅ AWS Rekognition용 환경변수 불러오기
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
