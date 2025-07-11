@@ -19,11 +19,10 @@ services:
     container_name: mysql-db
     restart: always
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-
+      MYSQL_DATABASE: ticketing
+      MYSQL_USER: ticketuser
+      MYSQL_PASSWORD: ticketpass
+      MYSQL_ROOT_PASSWORD: rootpass
     ports:
       - "3306:3306"
     volumes:

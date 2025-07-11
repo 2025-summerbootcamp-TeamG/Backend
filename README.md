@@ -10,10 +10,7 @@ Backend/
   ├── docker-compose.yml
   ├── .gitignore
   ├── ticket_backend/
-  ├── user/
-  ├── events
-  └── tickets/
-
+  └── facepass/
 ```
 
 ---
@@ -34,6 +31,28 @@ git clone https://github.com/2025-summerbootcamp-TeamG/Backend.git
 cd Backend
 ```
 
+---
+
+### 3. 환경 변수 파일(.env) 생성
+
+- `.env` 파일은 **반드시 직접 만들어야 합니다** (예시: 아래 참고)
+- 민감정보는 절대 깃허브에 올리지 마세요!  
+- 예시:
+  ```
+  # .env 예시
+  # AWS
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+
+# MySQL (장고 설정과 동일하게)
+MYSQL_DATABASE=ticketing
+MYSQL_USER=ticketuser
+MYSQL_PASSWORD=ticketpass
+MYSQL_ROOT_PASSWORD=rootpass
+
+  ```
+
+---
 
 ### 4. 도커로 실행
 
@@ -50,6 +69,11 @@ docker-compose up --build
 - createsuperuser : /admin페이지에 로그인할 수 있는 최초 관리자 계정 생성
 - 아직 실행 안함
 
+```bash
+docker-compose exec web bash
+python manage.py migrate
+python manage.py createsuperuser
+```
 
 ---
 
@@ -73,7 +97,61 @@ docker-compose up --build
   - requirements.txt로 파이썬 패키지 설치
   - 소스코드 복사 및 gunicorn으로 서버 실행
 
+```dockerfile
+FROM python:3.10-slim
+ENV PYTHONDONTWRITEBYTECODE 1 
+ENV PYTHONUNBUFFERED 1
+WORKDIR /app
+RUN apt-get update && apt-get install -y \
+    gcc \
+    default-libmysqlclient-dev \
+    pkg-config \
+    && apt-get clean
+COPY requirements.txt .
+RUN pip install --upgrade pip && pip install -r requirements.txt
+COPY . .
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "ticket_backend.wsgi:application"]
+```
 
+### docker-compose.yml
+
+- Django 웹 서버와 MySQL DB를 한 번에 실행하는 오케스트레이션 파일입니다.
+- 주요 내용:
+  - `web`: Django + gunicorn 컨테이너
+  - `db`: MySQL 8.0 컨테이너 (환경변수로 DB 초기화)
+  - 볼륨, 포트, .env 연동 등 설정
+
+```yaml
+version: '3.9'
+services:
+  web:
+    build: .
+    container_name: django-backend
+    command: gunicorn ticket_backend.wsgi:application --bind 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+  db:
+    image: mysql:8.0
+    container_name: mysql-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: ticketing
+      MYSQL_USER: ticketuser
+      MYSQL_PASSWORD: ticketpass
+      MYSQL_ROOT_PASSWORD: rootpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+volumes:
+  mysql_data:
+```
 
 ### requirements.txt
 
