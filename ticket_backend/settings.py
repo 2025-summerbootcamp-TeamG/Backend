@@ -74,14 +74,15 @@ WSGI_APPLICATION = 'ticket_backend.wsgi.application'
 # MySQL 데이터베이스 연결 (docker-compose와 연동)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get("MYSQL_DATABASE", "ticketing"),
-        'USER': os.environ.get("MYSQL_USER", "ticketuser"),
-        'PASSWORD': os.environ.get("MYSQL_PASSWORD", "ticketpass"),
-        'HOST': 'db',  # docker-compose의 서비스명
-        'PORT': '3306',
+        'ENGINE': os.environ.get("DB_ENGINE", "django.db.backends.mysql"),
+        'NAME': os.environ.get("MYSQL_DATABASE", ""),
+        'USER': os.environ.get("MYSQL_USER", ""),
+        'PASSWORD': os.environ.get("MYSQL_PASSWORD", ""),
+        'HOST': os.environ.get("MYSQL_HOST", "db"),
+        'PORT': os.environ.get("MYSQL_PORT", "3306"),
     }
 }
+
 
 # 비밀번호 정책 (기본 유지)
 AUTH_PASSWORD_VALIDATORS = [
