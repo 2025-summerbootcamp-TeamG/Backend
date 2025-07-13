@@ -28,7 +28,6 @@ INSTALLED_APPS = [
     'tickets',  # tickets 앱 추가
     'user',
     'events',
-    'tickets',
 ]
 
 SIMPLE_JWT = {
