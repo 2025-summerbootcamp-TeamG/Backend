@@ -50,11 +50,4 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'ticket',
             },
-                      name='Ticket',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('face_verified', models.BooleanField(default=False)),
-                ('verified_at', models.DateTimeField(blank=True, null=True)),
-            ],
-        ),
     ]
