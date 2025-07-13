@@ -1,4 +1,4 @@
-version: '3.9'
+version: "3.9"
 
 services:
   web:
@@ -19,10 +19,11 @@ services:
     container_name: mysql-db
     restart: always
     environment:
-      MYSQL_DATABASE: ticketing
-      MYSQL_USER: ticketuser
-      MYSQL_PASSWORD: ticketpass
-      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+
     ports:
       - "3306:3306"
     volumes:

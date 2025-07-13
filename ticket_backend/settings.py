@@ -25,9 +25,9 @@ INSTALLED_APPS = [
     'rest_framework',  # Django REST Framework
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'tickets',  # tickets 앱 추가
     'user',
     'events',
-    'tickets',
 ]
 
 SIMPLE_JWT = {
@@ -71,17 +71,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ticket_backend.wsgi.application'
 
-# ✅ MySQL 데이터베이스 연결 (docker-compose와 연동)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get("MYSQL_DATABASE", "ticketing"),
-        'USER': os.environ.get("MYSQL_USER", "ticketuser"),
-        'PASSWORD': os.environ.get("MYSQL_PASSWORD", "ticketpass"),
-        'HOST': 'db',  # docker-compose의 서비스명
-        'PORT': '3306',
+        'ENGINE': "django.db.backends.mysql",
+        'NAME': os.environ.get("MYSQL_DATABASE", ""),
+        'USER': os.environ.get("MYSQL_USER", ""),
+        'PASSWORD': os.environ.get("MYSQL_PASSWORD", ""),
+        'HOST': os.environ.get("MYSQL_HOST", "db"),
+        'PORT': os.environ.get("MYSQL_PORT", "3306"),
     }
 }
+
 
 # 비밀번호 정책 (기본 유지)
 AUTH_PASSWORD_VALIDATORS = [
@@ -97,6 +97,9 @@ TIME_ZONE = 'Asia/Seoul'  # 한국 시간
 USE_I18N = True
 USE_TZ = True
 
+# URL 슬래시 자동 추가 비활성화
+APPEND_SLASH = False
+
 # 정적 파일
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'static'
@@ -104,6 +107,6 @@ STATIC_ROOT = BASE_DIR / 'static'
 # 기본 PK 필드
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ✅ AWS Rekognition용 환경변수 불러오기
+# AWS Rekognition용 환경변수 불러오기
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")

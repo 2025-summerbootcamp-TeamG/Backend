@@ -11,6 +11,9 @@ class Purchase(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_deleted = models.BooleanField(default=False)
+    purchaser = models.CharField(max_length=20, null=True)
+    phone_number = models.CharField(max_length=30, null=True)
+    email = models.CharField(max_length=50, null=True)
 
     class Meta:
         db_table = 'purchase' 
@@ -30,3 +33,13 @@ class Ticket(models.Model):
 
     class Meta:
         db_table = 'ticket' 
+class Ticket(models.Model):
+    user_id = models.IntegerField()  # 또는 ForeignKey(User, ...) 등
+    face_verified = models.BooleanField(default=False)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    # ... (DB의 ticket 테이블에 맞는 필드 추가) ...
+    class Meta:
+        db_table = 'ticket'
+    
+    def __str__(self):
+        return f"Ticket {self.id}"
