@@ -49,7 +49,6 @@ MYSQL_DATABASE=ticketing
 MYSQL_USER=ticketuser
 MYSQL_PASSWORD=ticketpass
 MYSQL_ROOT_PASSWORD=rootpass
-
   ```
 
 ---

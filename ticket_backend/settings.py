@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'rest_framework',  # Django REST Framework
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'tickets',  # tickets 앱 추가
     'user',
     'events',
 ]
@@ -95,6 +96,9 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Seoul'  # 한국 시간
 USE_I18N = True
 USE_TZ = True
+
+# URL 슬래시 자동 추가 비활성화
+APPEND_SLASH = False
 
 # 정적 파일
 STATIC_URL = 'static/'
