@@ -23,4 +23,9 @@ urlpatterns = [
     path('api/v1/events/view/', EventListAPIView.as_view(), name='event-list'),
     path('api/v1/events/<int:event_id>', EventDetailAPIView.as_view(), name='event-detail'),
     path('api/v1/events/<int:zone_id>/seats/', EventSeatsAPIView.as_view(), name='event-seats'),
-] 
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('tickets.urls')),
+]
