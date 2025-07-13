@@ -51,3 +51,4 @@ class Migration(migrations.Migration):
                 'db_table': 'ticket',
             },
     ]
+)
