@@ -65,5 +65,5 @@ jobs:
           MYSQL_HOST: 127.0.0.1
           MYSQL_PORT: 3306
         run: |
-          python manage.py test   MYSQL_USER: ticketuser
+          python manage.py test
 
