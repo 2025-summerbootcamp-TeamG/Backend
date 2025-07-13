@@ -44,4 +44,43 @@ class EventListSerializer(serializers.ModelSerializer):
         return "예약가능"
 
     def get_tag(self, obj):
-        return "인기" 
+        return "인기"
+
+class EventListResponseSerializer(serializers.Serializer):
+    page = serializers.IntegerField()
+    limit = serializers.IntegerField()
+    totalCount = serializers.IntegerField()
+    events = EventListSerializer(many=True)
+    message = serializers.CharField(required=False)
+
+class EventDetailResponseSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+    date = serializers.CharField(allow_null=True)
+    location = serializers.CharField()
+    price = serializers.CharField()
+    thumbnail = serializers.CharField()
+    tag = serializers.CharField()
+    description = serializers.CharField()
+    schedules = serializers.ListField(child=serializers.DictField())
+
+class EventSeatsDataSerializer(serializers.Serializer):
+    seat_id = serializers.IntegerField()
+    seat_number = serializers.CharField()
+    price = serializers.IntegerField()
+    seat_status = serializers.CharField()
+    event_time_id = serializers.IntegerField()
+    available_count = serializers.IntegerField()
+
+class EventSeatsResponseSerializer(serializers.Serializer):
+    statusCode = serializers.IntegerField()
+    message = serializers.CharField()
+    data = serializers.ListField(child=EventSeatsDataSerializer())
+
+class BuyTicketsResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
+    purchase_id = serializers.IntegerField()
+    ticket_ids = serializers.ListField(child=serializers.IntegerField())
+
+class PayTicketResponseSerializer(serializers.Serializer):
+    message = serializers.CharField() 

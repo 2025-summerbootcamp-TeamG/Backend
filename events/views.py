@@ -12,15 +12,59 @@ from user.models import User
 from rest_framework import viewsets
 from django.db.models import Q
 from .models import Event, EventTime, Zone, Seat
-from .serializers import EventListSerializer
+from .serializers import (
+    EventListSerializer, EventListResponseSerializer,
+    EventDetailResponseSerializer, EventSeatsResponseSerializer,
+    BuyTicketsResponseSerializer, PayTicketResponseSerializer
+)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiTypes, OpenApiExample
 
 
 class BuyTicketsView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="티켓 예매",
+        description="선택한 좌석(seat_id 리스트)과 공연 일정(event_time_id)로 티켓을 예매합니다.",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'seat_id': {'type': 'array', 'items': {'type': 'integer'}, 'description': '예매할 좌석 id 리스트'},
+                    'event_time_id': {'type': 'integer', 'description': '공연 일정 id'}
+                },
+                'required': ['seat_id', 'event_time_id']
+            }
+        },
+        responses={
+            201: BuyTicketsResponseSerializer,
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="입력값 오류",
+                examples=[
+                    OpenApiExample(
+                        "BadRequest",
+                        value={"error": "seat_id 리스트와 event_time_id는 필수입니다."},
+                        status_codes=["400"]
+                    )
+                ]
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="좌석 없음",
+                examples=[
+                    OpenApiExample(
+                        "NotFound",
+                        value={"error": "일부 좌석을 찾을 수 없습니다."},
+                        status_codes=["404"]
+                    )
+                ]
+            ),
+        }
+    )
     def post(self, request, event_id):
         data = request.data
         user = request.user  # ✅ JWT에서 인증된 유저
@@ -82,6 +126,46 @@ class PayTicketView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="티켓 결제",
+        description="구매(purchase_id)에 대해 결제 정보를 입력하고 결제 완료 처리.",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'name': {'type': 'string', 'description': '구매자 이름'},
+                    'phone': {'type': 'string', 'description': '구매자 전화번호'},
+                    'email': {'type': 'string', 'description': '구매자 이메일'}
+                },
+                'required': ['name', 'phone', 'email']
+            }
+        },
+        responses={
+            200: PayTicketResponseSerializer,
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="입력값 오류",
+                examples=[
+                    OpenApiExample(
+                        "BadRequest",
+                        value={"error": "name, phone, email은 모두 필수입니다."},
+                        status_codes=["400"]
+                    )
+                ]
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="구매 정보 없음",
+                examples=[
+                    OpenApiExample(
+                        "NotFound",
+                        value={"error": "해당 구매 정보를 찾을 수 없습니다."},
+                        status_codes=["404"]
+                    )
+                ]
+            ),
+        }
+    )
     def post(self, request, purchase_id):
         data = request.data
         name = data.get('name')
@@ -114,6 +198,42 @@ class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
 
 class EventListAPIView(APIView):
+    @extend_schema(
+        summary="이벤트 목록 조회",
+        description="검색, 카테고리, 정렬, 페이지네이션이 가능한 이벤트 목록 API.",
+        parameters=[
+            OpenApiParameter(name='keyword', description='검색어', required=False, type=str, location=OpenApiParameter.QUERY),
+            OpenApiParameter(name='category', description='카테고리', required=False, type=str, location=OpenApiParameter.QUERY),
+            OpenApiParameter(name='sort', description='정렬(popular/new)', required=False, type=str, location=OpenApiParameter.QUERY),
+            OpenApiParameter(name='page', description='페이지 번호', required=False, type=int, location=OpenApiParameter.QUERY),
+            OpenApiParameter(name='limit', description='페이지당 개수', required=False, type=int, location=OpenApiParameter.QUERY),
+        ],
+        responses={
+            200: EventListResponseSerializer,
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="잘못된 요청",
+                examples=[
+                    OpenApiExample(
+                        "BadRequest",
+                        value={"message": "잘못된 요청입니다."},
+                        status_codes=["400"]
+                    )
+                ]
+            ),
+            500: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="서버 내부 오류",
+                examples=[
+                    OpenApiExample(
+                        "ServerError",
+                        value={"message": "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."},
+                        status_codes=["500"]
+                    )
+                ]
+            ),
+        },
+    )
     def get(self, request):
         try:
             keyword = request.GET.get('keyword', '')
@@ -166,6 +286,27 @@ class EventListAPIView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
 class EventDetailAPIView(APIView):
+    @extend_schema(
+        summary="이벤트 상세 조회",
+        description="특정 이벤트의 상세 정보(일정, 가격 범위, 상세정보)를 반환.",
+        parameters=[
+            OpenApiParameter(name='event_id', description='이벤트 ID', required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        responses={
+            200: EventDetailResponseSerializer,
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="이벤트 없음",
+                examples=[
+                    OpenApiExample(
+                        "NotFound",
+                        value={"message": "행사를 찾을 수 없습니다."},
+                        status_codes=["404"]
+                    )
+                ]
+            ),
+        }
+    )
     def get(self, request, event_id):
         try:
             event = Event.objects.get(pk=event_id, is_deleted=False)
@@ -205,6 +346,27 @@ class EventSeatsAPIView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="존별 좌석 정보 조회",
+        description="특정 존(zone_id)의 좌석 정보와 잔여 좌석 수를 반환.",
+        parameters=[
+            OpenApiParameter(name='zone_id', description='존 ID', required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        responses={
+            200: EventSeatsResponseSerializer,
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="존 없음",
+                examples=[
+                    OpenApiExample(
+                        "NotFound",
+                        value={"statusCode": 404, "message": "해당 존의 좌석 정보를 찾을 수 없습니다.", "data": None},
+                        status_codes=["404"]
+                    )
+                ]
+            ),
+        }
+    )
     def get(self, request, zone_id):
         try:
             zone = Zone.objects.get(pk=zone_id, is_deleted=False)
