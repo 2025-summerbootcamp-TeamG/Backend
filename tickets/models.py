@@ -1,7 +1,6 @@
 from django.db import models
 
 # Create your models here.
-
 from django.db import models
 from user.models import User
 from events.models import Seat
@@ -14,7 +13,7 @@ class Purchase(models.Model):
     is_deleted = models.BooleanField(default=False)
 
     class Meta:
-        db_table = 'purchase'
+        db_table = 'purchase' 
 
 
 class Ticket(models.Model):
@@ -30,5 +29,4 @@ class Ticket(models.Model):
     is_deleted = models.BooleanField(default=False)
 
     class Meta:
-        db_table = 'ticket'
-
+        db_table = 'ticket' 

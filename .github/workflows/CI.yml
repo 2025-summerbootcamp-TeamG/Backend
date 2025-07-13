@@ -47,6 +47,8 @@ jobs:
           DJANGO_SECRET_KEY: test-secret-key
           DEBUG: "False"
           MYSQL_DATABASE: ticketing
+
+          MYSQL_USER: ticketuser
           MYSQL_PASSWORD: ticketpass
           MYSQL_HOST: 127.0.0.1
           MYSQL_PORT: 3306
@@ -64,3 +66,4 @@ jobs:
           MYSQL_PORT: 3306
         run: |
           python manage.py test   MYSQL_USER: ticketuser
+

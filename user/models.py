@@ -14,6 +14,6 @@ class User(models.Model):
 
     def __str__(self):
         return self.name
-
+    
     class Meta:
-        db_table = 'user'
+        db_table = 'user'  # 테이블 이름을 'user'로 지정
