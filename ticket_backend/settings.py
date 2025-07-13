@@ -78,8 +78,8 @@ DATABASES = {
         'NAME': os.environ.get("MYSQL_DATABASE", "ticketing"),
         'USER': os.environ.get("MYSQL_USER", "ticketuser"),
         'PASSWORD': os.environ.get("MYSQL_PASSWORD", "ticketpass"),
-        'HOST': 'db',  # docker-compose의 서비스명
-        'PORT': '3306',
+        'HOST': os.environ.get("MYSQL_HOST", "127.0.0.1"),  # docker-compose의 서비스명
+        'PORT': os.environ.get("MYSQL_PORT", "3306"),
     }
 }
 

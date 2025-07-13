@@ -16,7 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from events.views import EventListAPIView, EventDetailAPIView, EventSeatsAPIView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-]
+    path('api/v1/events/view/', EventListAPIView.as_view(), name='event-list'),
+    path('api/v1/events/<int:event_id>', EventDetailAPIView.as_view(), name='event-detail'),
+    path('api/v1/events/<int:zone_id>/seats/', EventSeatsAPIView.as_view(), name='event-seats'),
+] 
