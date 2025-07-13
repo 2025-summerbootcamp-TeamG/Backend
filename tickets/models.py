@@ -11,6 +11,9 @@ class Purchase(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_deleted = models.BooleanField(default=False)
+    purchaser = models.CharField(max_length=20, null=True)
+    phone_number = models.CharField(max_length=30, null=True)
+    email = models.CharField(max_length=50, null=True)
 
     class Meta:
         db_table = 'purchase' 
