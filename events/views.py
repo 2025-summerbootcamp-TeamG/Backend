@@ -9,6 +9,12 @@ from tickets.models import Purchase, Ticket
 from user.models import User   
 
 
+from rest_framework import viewsets
+from django.db.models import Q
+from .models import Event, EventTime, Zone, Seat
+from .serializers import EventListSerializer
+
+
 class BuyTicketsView(APIView):
     def post(self, request, event_id): # POST request 
         data = request.data
@@ -82,13 +88,34 @@ class BuyTicketsView(APIView):
             'ticket_ids': tickets
         }, status=status.HTTP_201_CREATED)
 
-from rest_framework import viewsets
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.db.models import Q
-from .models import Event, EventTime, Zone, Seat
-from .serializers import EventListSerializer
+class PayTicketView(APIView):
+    def post(self, request, purchase_id):
+        data = request.data
+        user_id = data.get('user_id')
+        name = data.get('name')
+        phone = data.get('phone')
+        email = data.get('email')
+
+        # 필수값 확인
+        if not all([user_id, name, phone, email]):
+            return Response({'error': 'user_id, name, phone, email은 모두 필수입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # 구매 정보 조회 (삭제되지 않은 상태에서)
+            purchase = Purchase.objects.get(id=purchase_id, user_id=user_id, is_deleted=False)
+        except Purchase.DoesNotExist:
+            return Response({'error': '해당 구매 정보를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # 정보 업데이트
+        purchase.purchase_status = 'completed'
+        purchase.updated_at = timezone.now()
+        purchase.purchaser = name
+        purchase.phone_number = phone
+        purchase.email = email
+        purchase.save()
+
+        return Response({'message': '결제가 완료되었습니다.'}, status=status.HTTP_200_OK)   
+
 
 # Create your views here.
 class EventViewSet(viewsets.ModelViewSet):
