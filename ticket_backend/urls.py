@@ -17,12 +17,13 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include 
-from events.views import EventListAPIView, EventDetailAPIView, EventSeatsAPIView
+from events.views import EventListAPIView, EventDetailAPIView, EventSeatsAPIView, BuyTicketsView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/events/view/', EventListAPIView.as_view(), name='event-list'),
     path('api/v1/events/<int:event_id>', EventDetailAPIView.as_view(), name='event-detail'),
     path('api/v1/events/<int:zone_id>/seats/', EventSeatsAPIView.as_view(), name='event-seats'),
-    path('', include('tickets.urls'))
+    path('', include('tickets.urls')),
+    path('events/<int:event_id>/tickets/buy', BuyTicketsView.as_view())
 ]
