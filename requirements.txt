@@ -9,3 +9,4 @@ python-decouple     # .env 파일에 aws 키 등 민감 정보 분리 가능
 python-dotenv       # .env를 직접 불러오는 방식
 mysqlclient         # python이 mysql db에 접속할 수 있게 함
 djangorestframework-simplejwt
+requests
