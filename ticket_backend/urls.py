@@ -18,13 +18,20 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include 
 from events.views import EventListAPIView, EventDetailAPIView, EventSeatsAPIView, BuyTicketsView, PayTicketView
+from tickets.views import FaceRegisterAPIView, TicketFaceAuthAPIView, AWSFaceRecognitionView, face_register_page
+from tickets.views import FaceListAPIView, FaceDeleteAPIView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/events/view/', EventListAPIView.as_view(), name='event-list'),
     path('api/v1/events/<int:event_id>', EventDetailAPIView.as_view(), name='event-detail'),
     path('api/v1/events/<int:zone_id>/seats/', EventSeatsAPIView.as_view(), name='event-seats'),
-    path('', include('tickets.urls')),
+    path('api/v1/tickets/<int:ticket_id>/register/', FaceRegisterAPIView.as_view(), name='ticket-face-register'),
+    path('api/v1/tickets/<int:ticket_id>/auth/', TicketFaceAuthAPIView.as_view(), name='ticket-face-auth'),
+    path('api/v1/tickets/face-recognition/', AWSFaceRecognitionView.as_view(), name='face-recognition'),
+    path('api/v1/tickets/face-register/', face_register_page, name='face-register'),
+    path('api/v1/tickets/face-list/', FaceListAPIView.as_view(), name='face-list'),
+    path('api/v1/tickets/face-delete/', FaceDeleteAPIView.as_view(), name='face-delete'),
     path('events/<int:event_id>/tickets/buy', BuyTicketsView.as_view()),
-     path('events/<int:purchase_id>/tickets/pay', PayTicketView.as_view(), name='pay-ticket'),
+    path('events/<int:purchase_id>/tickets/pay', PayTicketView.as_view(), name='pay-ticket'),
 ]

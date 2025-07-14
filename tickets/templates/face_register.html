@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>얼굴 등록 시스템</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .camera { margin: 20px 0; }
+        #video { width: 100%; border: 2px solid #ccc; }
+        .btn { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .btn:hover { background: #0056b3; }
+        .result { margin: 20px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>얼굴 등록 시스템</h1>
+        
+        <div class="camera">
+            <video id="video" autoplay></video>
+            <canvas id="canvas" style="display: none;"></canvas>
+        </div>
+        
+        <div>
+            <button class="btn" onclick="startCamera()">카메라 시작</button>
+            <button class="btn" onclick="captureFace()">얼굴 등록</button>
+            <button class="btn" onclick="verifyFace()">얼굴 인증</button>
+        </div>
+        
+        <!-- 티켓 얼굴 등록 상태 확인 UI -->
+        <div style="margin-top:20px;">
+            <input type="number" id="auth_ticket_id" placeholder="티켓 ID 입력" style="padding:8px; width:120px;" />
+            <button class="btn" onclick="checkFaceAuth()">얼굴 등록 상태 확인</button>
+        </div>
+        
+        <!-- 얼굴 등록/인증용 ticket_id, user_id 입력 UI 추가 -->
+        <div style="margin-top:20px;">
+            <input type="number" id="register_ticket_id" placeholder="등록할 티켓 ID" style="padding:8px; width:120px;" />
+            <input type="number" id="register_user_id" placeholder="유저 ID" style="padding:8px; width:120px;" />
+        </div>
+        <!-- 얼굴 인증용 ticket_id, user_id 입력 UI 추가 -->
+        <div style="margin-top:10px;">
+            <input type="number" id="verify_ticket_id" placeholder="인증할 티켓 ID" style="padding:8px; width:120px;" />
+            <input type="number" id="verify_user_id" placeholder="유저 ID" style="padding:8px; width:120px;" />
+        </div>
+        
+        <!-- 등록된 얼굴 목록 표시 영역 추가 -->
+        <div style="margin-top:30px;">
+            <h3>등록된 얼굴 목록 (ExternalImageId)</h3>
+            <button class="btn" onclick="loadFaceList()">목록 새로고침</button>
+            <ul id="face-list" style="margin-top:10px;"></ul>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let stream = null;
+        let registeredFace = null;
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                document.getElementById('video').srcObject = stream;
+                showResult('카메라가 시작되었습니다.', 'success');
+            } catch (err) {
+                showResult('카메라 접근 권한이 필요합니다.', 'error');
+            }
+        }
+
+        function captureFace() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+            
+            // 이미지를 base64로 변환
+            const imageData = canvas.toDataURL('image/jpeg').split(',')[1];
+            registeredFace = imageData;
+            
+            // 입력값 가져오기
+            const ticketId = document.getElementById('register_ticket_id').value;
+            const userId = document.getElementById('register_user_id').value;
+            if (!ticketId || !userId) {
+                showResult('티켓 ID와 유저 ID를 입력해주세요.', 'error');
+                return;
+            }
+            // 서버에 얼굴 등록 요청
+            registerFaceToServer(imageData, ticketId, userId);
+        }
+
+        async function registerFaceToServer(imageData, ticketId, userId) {
+            try {
+                const response = await fetch('/api/v1/tickets/face-recognition/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        image: imageData,
+                        ticket_id: ticketId,
+                        user_id: userId,
+                        action: 'register'
+                    })
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    showResult('얼굴이 성공적으로 등록되었습니다!<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
+                } else {
+                    showResult('얼굴 등록 실패: ' + result.message + '<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'error');
+                }
+            } catch (err) {
+                showResult('서버 오류: ' + err.message, 'error');
+            }
+        }
+
+        async function verifyFace() {
+            // 입력값 가져오기
+            const ticketId = document.getElementById('verify_ticket_id').value;
+            const userId = document.getElementById('verify_user_id').value;
+            if (!ticketId || !userId) {
+                showResult('인증할 티켓 ID와 유저 ID를 입력해주세요.', 'error');
+                return;
+            }
+
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+            
+            const currentImageData = canvas.toDataURL('image/jpeg').split(',')[1];
+            
+            try {
+                const response = await fetch('/api/v1/tickets/face-recognition/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        image: currentImageData,
+                        ticket_id: ticketId,
+                        user_id: userId,
+                        action: 'verify'
+                    })
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    showResult('얼굴 인증 성공!<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
+                } else {
+                    showResult('얼굴 인증 실패: ' + result.message + '<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'error');
+                }
+            } catch (err) {
+                showResult('서버 오류: ' + err.message, 'error');
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+
+        // 티켓 얼굴 등록 상태 확인 함수 추가
+        async function checkFaceAuth() {
+            const ticketId = document.getElementById('auth_ticket_id').value;
+            if (!ticketId) {
+                showResult('티켓 ID를 입력해주세요.', 'error');
+                return;
+            }
+            try {
+                const response = await fetch(`/api/v1/tickets/${ticketId}/auth/`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showResult('티켓 얼굴 등록 상태:<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
+                } else {
+                    showResult('조회 실패: ' + result.message + '<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'error');
+                }
+            } catch (err) {
+                showResult('서버 오류: ' + err.message, 'error');
+            }
+        }
+
+        // 등록된 얼굴 목록 불러오기
+        async function loadFaceList() {
+            const listEl = document.getElementById('face-list');
+            listEl.innerHTML = '불러오는 중...';
+            try {
+                const response = await fetch('/api/v1/tickets/face-list/', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                if (response.ok && result.data) {
+                    if (result.data.length === 0) {
+                        listEl.innerHTML = '<li>등록된 얼굴이 없습니다.</li>';
+                    } else {
+                        listEl.innerHTML = '';
+                        result.data.forEach(face => {
+                            const li = document.createElement('li');
+                            li.style.marginBottom = '8px';
+                            li.innerHTML = `${face.ExternalImageId} <button class='btn' style='padding:4px 10px;font-size:12px;' onclick="deleteFace('${face.FaceId}')">삭제</button>`;
+                            listEl.appendChild(li);
+                        });
+                    }
+                } else {
+                    listEl.innerHTML = '<li>목록 불러오기 실패</li>';
+                }
+            } catch (err) {
+                listEl.innerHTML = '<li>서버 오류: ' + err.message + '</li>';
+            }
+        }
+
+        // 얼굴 삭제 함수
+        async function deleteFace(faceId) {
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            try {
+                const response = await fetch('/api/v1/tickets/face-delete/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ face_id: faceId })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert('삭제 성공!');
+                    loadFaceList();
+                } else {
+                    alert('삭제 실패: ' + result.message);
+                }
+            } catch (err) {
+                alert('서버 오류: ' + err.message);
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>

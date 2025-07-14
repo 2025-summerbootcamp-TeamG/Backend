@@ -5,6 +5,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from .models import Ticket
+import boto3
+import base64
+import io
+from PIL import Image
+import os
+import requests
 
 
 class FaceRegisterAPIView(APIView):
@@ -155,3 +161,179 @@ class TicketFaceAuthAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content_type="application/json; charset=UTF-8"
             )
+
+
+class AWSFaceRecognitionView(APIView):
+    def post(self, request):
+        try:
+            action = request.data.get('action')
+            user_id = request.data.get('user_id')
+            ticket_id = request.data.get('ticket_id')
+            image_data = request.data.get('image')
+
+            rekognition = boto3.client(
+                'rekognition',
+                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+                region_name='ap-northeast-2'
+            )
+
+            if action == 'register':
+                # Rekognition Collection에 얼굴 등록
+                image_bytes = base64.b64decode(image_data)
+                collection_id = 'my-tickets'  # 실제 생성한 Collection ID
+
+                external_image_id = f'user_{user_id}_ticket_{ticket_id}'
+                response = rekognition.index_faces(
+                    CollectionId=collection_id,
+                    Image={'Bytes': image_bytes},
+                    ExternalImageId=external_image_id,
+                    DetectionAttributes=['DEFAULT']
+                )
+
+                if response['FaceRecords']:
+                    # 티켓 정보 업데이트
+                    try:
+                        ticket = Ticket.objects.get(id=ticket_id)
+                        ticket.face_verified = True
+                        ticket.verified_at = timezone.now()
+                        ticket.save()
+
+                        verified_at_local = timezone.localtime(ticket.verified_at)
+                        verified_at_str = verified_at_local.strftime('%Y-%m-%d %H:%M:%S')
+
+                        return Response(
+                            {
+                                "code": 200,
+                                "message": "얼굴 등록 상태가 정상적으로 업데이트 되었습니다",
+                                "data": {
+                                    "ticket_id": ticket.id,
+                                    "user_id": ticket.user_id,
+                                    "face_verified": ticket.face_verified,
+                                    "verified_at": verified_at_str,
+                                    "external_image_id": external_image_id
+                                }
+                            },
+                            status=status.HTTP_200_OK,
+                            content_type="application/json; charset=UTF-8"
+                        )
+                    except Ticket.DoesNotExist:
+                        return Response(
+                            {
+                                "message": "티켓 없음",
+                                "data": None
+                            },
+                            status=status.HTTP_404_NOT_FOUND,
+                            content_type="application/json; charset=UTF-8"
+                        )
+                else:
+                    return Response({
+                        'message': '얼굴이 감지되지 않았습니다.'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+            elif action == 'verify':
+                # 얼굴 인증
+                image_bytes = base64.b64decode(image_data)
+                collection_id = 'my-tickets'
+
+                response = rekognition.search_faces_by_image(
+                    CollectionId=collection_id,
+                    Image={'Bytes': image_bytes},
+                    MaxFaces=5,  # 여러 개를 받아서 필터링
+                    FaceMatchThreshold=95
+                )
+
+                # 요청값으로 ExternalImageId 생성
+                external_image_id = f'user_{user_id}_ticket_{ticket_id}'
+                # FaceMatches 중 ExternalImageId가 일치하는 것만 필터링
+                matched_face = None
+                for match in response.get('FaceMatches', []):
+                    if match['Face'].get('ExternalImageId') == external_image_id:
+                        matched_face = match
+                        break
+
+                # FaceMatches 전체를 가공해서 응답에 포함
+                face_matches_list = [
+                    {
+                        'similarity': m['Similarity'],
+                        'face_id': m['Face']['FaceId'],
+                        'external_image_id': m['Face'].get('ExternalImageId', '')
+                    } for m in response.get('FaceMatches', [])
+                ]
+
+                if matched_face:
+                    similarity = matched_face['Similarity']
+                    face_id = matched_face['Face']['FaceId']
+                    return Response({
+                        'message': '얼굴 인증 성공',
+                        'similarity': similarity,
+                        'face_id': face_id,
+                        'external_image_id': external_image_id,
+                        'face_matches': face_matches_list
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({
+                        'message': '얼굴 인증 실패: 해당 티켓에 등록된 얼굴과 일치하지 않습니다.',
+                        'face_matches': face_matches_list
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                    
+        except Exception as e:
+            return Response({
+                'message': '처리 중 오류 발생',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# 등록된 얼굴 목록 반환 API
+class FaceListAPIView(APIView):
+    def get(self, request):
+        try:
+            rekognition = boto3.client(
+                'rekognition',
+                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+                region_name='ap-northeast-2'
+            )
+            collection_id = 'my-tickets'
+            faces = []
+            response = rekognition.list_faces(CollectionId=collection_id, MaxResults=60)
+            faces.extend(response.get('Faces', []))
+            # NextToken 처리 (최대 1000개까지)
+            next_token = response.get('NextToken')
+            while next_token:
+                response = rekognition.list_faces(CollectionId=collection_id, NextToken=next_token, MaxResults=60)
+                faces.extend(response.get('Faces', []))
+                next_token = response.get('NextToken')
+            # 필요한 정보만 추려서 반환
+            data = [
+                {
+                    'FaceId': face['FaceId'],
+                    'ExternalImageId': face.get('ExternalImageId', '')
+                } for face in faces
+            ]
+            return Response({'data': data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'message': '목록 불러오기 실패', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# 얼굴 삭제 API
+class FaceDeleteAPIView(APIView):
+    def post(self, request):
+        face_id = request.data.get('face_id')
+        if not face_id:
+            return Response({'message': 'face_id가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            rekognition = boto3.client(
+                'rekognition',
+                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+                region_name='ap-northeast-2'
+            )
+            collection_id = 'my-tickets'
+            rekognition.delete_faces(CollectionId=collection_id, FaceIds=[face_id])
+            return Response({'message': '삭제 성공'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'message': '삭제 실패', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+def face_register_page(request):
+    return render(request, 'face_register.html')
