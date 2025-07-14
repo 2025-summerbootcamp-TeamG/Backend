@@ -4,6 +4,7 @@ from django.db import models
 from user.models import User
 from events.models import Seat
 
+
 class Purchase(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     purchase_status = models.CharField(max_length=20)  # 예: 결제 전, 완료, 취소 등
