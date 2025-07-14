@@ -1,7 +1,7 @@
 """
 URL configuration for ticket_backend project.
 
-The urlpatterns list routes URLs to views. For more information please see:
+The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
 Examples:
 Function views
@@ -14,13 +14,11 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-
 from django.contrib import admin
-from django.urls import path, include 
-from events.views import EventListAPIView, EventDetailAPIView, EventSeatsAPIView, BuyTicketsView, PayTicketView
-from tickets.views import FaceRegisterAPIView, TicketFaceAuthAPIView, ShareTicketsView
+from django.urls import path, include
+from events.views import EventListAPIView, EventDetailAPIView, EventSeatsAPIView
 
-urlpatterns = [
+rlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/events/view/', EventListAPIView.as_view(), name='event-list'),
     path('api/v1/events/<int:event_id>', EventDetailAPIView.as_view(), name='event-detail'),
@@ -30,4 +28,15 @@ urlpatterns = [
     path('api/v1/tickets/<int:ticket_id>/register/', FaceRegisterAPIView.as_view()),
     path('api/v1/tickets/<int:ticket_id>/auth/', TicketFaceAuthAPIView.as_view()),
     path('tickets/<int:purchase_id>/share', ShareTicketsView.as_view(), name='share-tickets'),
+    path('api/v1/tickets/<int:ticket_id>/register/', FaceRegisterAPIView.as_view(), name='ticket-face-register'),
+    path('api/v1/tickets/<int:ticket_id>/auth/', TicketFaceAuthAPIView.as_view(), name='ticket-face-auth'),
+    path('api/v1/tickets/face-recognition/', AWSFaceRecognitionView.as_view(), name='face-recognition'),
+    path('api/v1/tickets/face-register/', face_register_page, name='face-register'),
+    path('api/v1/tickets/face-list/', FaceListAPIView.as_view(), name='face-list'),
+    path('api/v1/tickets/face-delete/', FaceDeleteAPIView.as_view(), name='face-delete'),
+    path('events/<int:event_id>/tickets/buy', BuyTicketsView.as_view()),
+    path('events/<int:purchase_id>/tickets/pay', PayTicketView.as_view(), name='pay-ticket'),
+    path('user/signup/', UserSignupView.as_view(), name='signup'),
+    path('user/login/', UserLoginView.as_view(), name='login'),
+    path('user/logout/', UserLogoutView.as_view(), name='logout'),
 ]
