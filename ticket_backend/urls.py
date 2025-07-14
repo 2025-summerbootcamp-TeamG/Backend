@@ -26,5 +26,5 @@ urlpatterns = [
     path('api/v1/events/<int:zone_id>/seats/', EventSeatsAPIView.as_view(), name='event-seats'),
     path('', include('tickets.urls')),
     path('events/<int:event_id>/tickets/buy', BuyTicketsView.as_view()),
-     path('events/<int:purchase_id>/tickets/pay', PayTicketView.as_view(), name='pay-ticket'),
+    path('events/<int:purchase_id>/tickets/pay', PayTicketView.as_view(), name='pay-ticket'),
 ]
