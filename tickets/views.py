@@ -5,6 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from .models import Ticket
+from django.db import transaction
+from user.models import User  
 
 
 class FaceRegisterAPIView(APIView):
@@ -155,3 +157,53 @@ class TicketFaceAuthAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content_type="application/json; charset=UTF-8"
             )
+
+class ShareTicketsView(APIView):
+    def post(self, request, purchase_id):
+        data = request.data
+        user_id = data.get("user_id")
+        ticket_user_emails = data.get("ticket_user_emails")
+
+        if not user_id or not isinstance(ticket_user_emails, list):
+            return Response({"error": "user_id and ticket_user_emails are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with transaction.atomic():
+                # 이메일로 유저 조회
+                users = User.objects.filter(email__in=ticket_user_emails)
+                if users.count() != len(ticket_user_emails):
+                    return Response({"error": "Some emails do not match any user"}, status=status.HTTP_400_BAD_REQUEST)
+
+                email_to_user_id = {user.email: user.id for user in users}
+                shared_user_ids = [email_to_user_id[email] for email in ticket_user_emails]
+
+                # 모든 티켓 가져오기 (본인 user_id로 등록된)
+                tickets = list(Ticket.objects.select_for_update().filter(purchase__id=purchase_id, user_id=user_id).order_by('id'))
+
+                if len(tickets) != 1 + len(shared_user_ids):
+                    return Response({
+                        "error": "공유 티켓 수가 맞지 않음",
+                        "details": {
+                            "current_tickets_count": len(tickets),
+                            "shared_users_count": len(shared_user_ids),
+                            "required_tickets": 1 + len(shared_user_ids),
+                            "purchase_id": purchase_id,
+                            "user_id": user_id
+                        }
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # 첫 번째 티켓은 본인 소유 유지
+                my_ticket = tickets[0]
+                tickets_to_share = tickets[1:1+len(shared_user_ids)]
+
+                # 티켓 업데이트
+                now = timezone.now()
+                for ticket, new_user_id in zip(tickets_to_share, shared_user_ids):
+                    ticket.user_id = new_user_id
+                    ticket.updated_at = now
+                    ticket.save()
+
+                return Response({"message": "Tickets shared successfully"}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
