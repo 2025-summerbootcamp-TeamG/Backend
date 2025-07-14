@@ -20,8 +20,18 @@ from events.views import EventListAPIView, EventDetailAPIView, EventSeatsAPIView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # 이벤트 관련 API
     path('api/v1/events/view/', EventListAPIView.as_view(), name='event-list'),
     path('api/v1/events/<int:event_id>', EventDetailAPIView.as_view(), name='event-detail'),
     path('api/v1/events/<int:zone_id>/seats/', EventSeatsAPIView.as_view(), name='event-seats'),
-    path('', include('tickets.urls'))
+
+    # 티켓 관련 API (기존)
+    path('', include('tickets.urls')),
+
+    # 사용자 인증(회원가입/로그인/로그아웃) API
+    path('user/signup/', UserSignupView.as_view(), name='signup'),
+    path('user/login/', UserLoginView.as_view(), name='login'),
+    path('user/logout/', UserLogoutView.as_view(), name='logout'),
+
 ]
