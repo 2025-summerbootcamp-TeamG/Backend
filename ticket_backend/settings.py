@@ -41,6 +41,13 @@ REST_FRAMEWORK = {
     ),
 }
 
+SIMPLE_JWT = {
+    "BLACKLIST_AFTER_ROTATION": True,
+    "ROTATE_REFRESH_TOKENS": True,
+}
+
+AUTH_USER_MODEL = 'user.User'
+
 # 미들웨어
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
