@@ -22,7 +22,7 @@ from tickets.views import FaceRegisterAPIView, TicketFaceAuthAPIView, AWSFaceRec
 from tickets.views import FaceListAPIView, FaceDeleteAPIView
 from user.views import UserSignupView, UserLoginView, UserLogoutView
 
-rlpatterns = [
+urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/events/view/', EventListAPIView.as_view(), name='event-list'),
     path('api/v1/events/<int:event_id>', EventDetailAPIView.as_view(), name='event-detail'),
@@ -39,5 +39,5 @@ rlpatterns = [
     path('user/signup/', UserSignupView.as_view(), name='signup'),
     path('user/login/', UserLoginView.as_view(), name='login'),
     path('user/logout/', UserLogoutView.as_view(), name='logout'),
-    
 ]
+
