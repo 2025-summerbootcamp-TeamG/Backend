@@ -3,6 +3,9 @@ from pathlib import Path
 from dotenv import load_dotenv  # 1️⃣ 환경변수 로딩용 (필요하면 설치: `pip install python-dotenv`)
 from datetime import timedelta
 
+
+DEBUG=True
+
 # .env 파일 로드
 load_dotenv()
 
@@ -24,6 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',  # Django REST Framework
+    'drf_yasg',  # Swagger
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'tickets',  # tickets 앱 추가
@@ -110,7 +114,7 @@ USE_TZ = True
 APPEND_SLASH = False
 
 # 정적 파일
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'static'
 
 # 기본 PK 필드
@@ -119,3 +123,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # AWS Rekognition용 환경변수 불러오기
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+
+
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,  # 세션 로그인 비활성화
+    'LOGIN_URL': '/api/v1/user/login/',
+    'LOGOUT_URL': '/api/v1/user/logout/',
+    'DEFAULT_INFO': 'ticket_backend.urls.schema_view',  # Optional
+}
