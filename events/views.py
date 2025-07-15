@@ -13,39 +13,38 @@ from rest_framework import viewsets
 from django.db.models import Q
 from .models import Event, EventTime, Zone, Seat
 from .serializers import EventListSerializer
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
 class BuyTicketsView(APIView):
-    def post(self, request, event_id): # POST request 
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, event_id):
         data = request.data
-        user_id = data.get('user_id') 
+        user = request.user  # ✅ JWT에서 인증된 유저
         seat_ids = data.get('seat_id', [])
         event_time_id = data.get('event_time_id')
 
-        if not user_id or not seat_ids or not event_time_id:
-            return Response({'error': 'user_id, seat_id list, and event_time_id are required.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        if user_id is None:
-            return Response({'error': 'user_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        # user_id는 이제 검증할 필요 없음
+        if not seat_ids or not event_time_id:
+            return Response({'error': 'seat_id list and event_time_id are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
         if not isinstance(seat_ids, list) or not seat_ids:
             return Response({'error': 'seat_id must be a non-empty list.'}, status=status.HTTP_400_BAD_REQUEST)
-        if event_time_id is None:
-            return Response({'error': 'event_time_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 유저 존재 확인
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
-        
+        # 좌석 존재 여부 확인
         seats = Seat.objects.filter(id__in=seat_ids)
         if seats.count() != len(seat_ids):
             return Response({'error': 'Some seats not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+        # 이미 예약된 좌석 확인
         unavailable_seats = [seat.id for seat in seats if seat.seat_status != 'available']
         if unavailable_seats:
             return Response({'error': f'이미 선택된 좌석입니다: {unavailable_seats}'}, status=status.HTTP_400_BAD_REQUEST)
-        # 1. Purchase 생성
+
+        # Purchase 생성
         purchase = Purchase.objects.create(
             user=user,
             purchase_status="결제 전",
@@ -54,18 +53,9 @@ class BuyTicketsView(APIView):
             is_deleted=False
         )
 
-
-
-        # 2. Seat 리스트 기반으로 Ticket 여러 개 생성
+        # Ticket 생성
         tickets = []
-        for seat_id in seat_ids:
-            try:
-                seat = Seat.objects.get(id=seat_id)
-            except Seat.DoesNotExist:
-                return Response({'error': f'Seat {seat_id} not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-
-
+        for seat in seats:
             ticket = Ticket.objects.create(
                 user=user,
                 seat=seat,
@@ -79,7 +69,6 @@ class BuyTicketsView(APIView):
             )
             seat.seat_status = 'booked'
             seat.save()
-
             tickets.append(ticket.id)
 
         return Response({
@@ -88,21 +77,24 @@ class BuyTicketsView(APIView):
             'ticket_ids': tickets
         }, status=status.HTTP_201_CREATED)
 
+
 class PayTicketView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, purchase_id):
         data = request.data
-        user_id = data.get('user_id')
         name = data.get('name')
         phone = data.get('phone')
         email = data.get('email')
 
         # 필수값 확인
-        if not all([user_id, name, phone, email]):
-            return Response({'error': 'user_id, name, phone, email은 모두 필수입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not all([name, phone, email]):
+            return Response({'error': 'name, phone, email은 모두 필수입니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # 구매 정보 조회 (삭제되지 않은 상태에서)
-            purchase = Purchase.objects.get(id=purchase_id, user_id=user_id, is_deleted=False)
+            # 인증된 유저와 purchase_id로 구매 정보 조회
+            purchase = Purchase.objects.get(id=purchase_id, user=request.user, is_deleted=False)
         except Purchase.DoesNotExist:
             return Response({'error': '해당 구매 정보를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -114,7 +106,7 @@ class PayTicketView(APIView):
         purchase.email = email
         purchase.save()
 
-        return Response({'message': '결제가 완료되었습니다.'}, status=status.HTTP_200_OK)   
+        return Response({'message': '결제가 완료되었습니다.'}, status=status.HTTP_200_OK)
 
 
 # Create your views here.
@@ -210,6 +202,9 @@ class EventDetailAPIView(APIView):
             return Response({"message": "행사를 찾을 수 없습니다."}, status=404)
             
 class EventSeatsAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, zone_id):
         try:
             zone = Zone.objects.get(pk=zone_id, is_deleted=False)
@@ -228,10 +223,10 @@ class EventSeatsAPIView(APIView):
                 "statusCode": 200,
                 "message": "좌석 정보를 성공적으로 불러왔습니다.",
                 "data": seats_data
-            }, status=200)
+            }, status=status.HTTP_200_OK)
         except Zone.DoesNotExist:
             return Response({
                 "statusCode": 404,
                 "message": "해당 존의 좌석 정보를 찾을 수 없습니다.",
                 "data": None
-            }, status=404)
+            }, status=status.HTTP_404_NOT_FOUND)

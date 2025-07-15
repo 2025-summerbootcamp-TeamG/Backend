@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv  # 1️⃣ 환경변수 로딩용 (필요하면 설치: `pip install python-dotenv`)
+from datetime import timedelta
 
 # .env 파일 로드
 load_dotenv()
@@ -31,6 +32,7 @@ INSTALLED_APPS = [
 ]
 
 SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "BLACKLIST_AFTER_ROTATION": True,
     "ROTATE_REFRESH_TOKENS": True,
 }
