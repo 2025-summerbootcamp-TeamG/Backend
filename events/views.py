@@ -15,13 +15,15 @@ from .models import Event, EventTime, Zone, Seat
 from .serializers import (
     EventListSerializer, EventListResponseSerializer,
     EventDetailResponseSerializer, EventSeatsResponseSerializer,
-    BuyTicketsResponseSerializer, PayTicketResponseSerializer
+    BuyTicketsResponseSerializer, PayTicketResponseSerializer,
+    EventSerializer
 )
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiTypes, OpenApiExample
 
 
+@extend_schema(tags=["events"])
 class BuyTicketsView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -121,7 +123,7 @@ class BuyTicketsView(APIView):
             'ticket_ids': tickets
         }, status=status.HTTP_201_CREATED)
 
-
+@extend_schema(tags=["events"])
 class PayTicketView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -193,10 +195,11 @@ class PayTicketView(APIView):
         return Response({'message': '결제가 완료되었습니다.'}, status=status.HTTP_200_OK)
 
 
-# Create your views here.
+@extend_schema(tags=["events"])
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
 
+@extend_schema(tags=["events"])
 class EventListAPIView(APIView):
     @extend_schema(
         summary="이벤트 목록 조회",
@@ -248,8 +251,7 @@ class EventListAPIView(APIView):
             if keyword:
                 queryset = queryset.filter(
                     Q(artist__icontains=keyword) |
-                    Q(location__icontains=keyword) |
-                    Q(description__icontains=keyword)
+                    Q(name__icontains=keyword)
                 )
             if category:
                 queryset = queryset.filter(genre=category)
@@ -284,7 +286,8 @@ class EventListAPIView(APIView):
             return Response({
                 "message": "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
+     
+@extend_schema(tags=["events"])       
 class EventDetailAPIView(APIView):
     @extend_schema(
         summary="이벤트 상세 조회",
@@ -310,7 +313,8 @@ class EventDetailAPIView(APIView):
     def get(self, request, event_id):
         try:
             event = Event.objects.get(pk=event_id, is_deleted=False)
-            # 공연 일정 리스트
+            event.view_count += 1
+            event.save(update_fields=["view_count"])
             schedules = EventTime.objects.filter(event=event).order_by('event_date', 'start_time')
             schedule_list = [
                 {
@@ -320,7 +324,6 @@ class EventDetailAPIView(APIView):
                 }
                 for et in schedules
             ]
-            # 가격 범위 계산
             prices = []
             for et in schedules:
                 prices += [z.price for z in et.zone_set.all()]
@@ -329,7 +332,8 @@ class EventDetailAPIView(APIView):
 
             data = {
                 "id": event.id,
-                "title": event.artist,
+                "name": event.name,
+                "artist": event.artist,
                 "date": schedules[0].event_date.isoformat() if schedules else None,
                 "location": event.location,
                 "price": f"₩{min_price:,} ~ ₩{max_price:,}" if min_price != max_price else f"₩{min_price:,}",
@@ -338,10 +342,12 @@ class EventDetailAPIView(APIView):
                 "description": event.description,
                 "schedules": schedule_list,
             }
-            return Response(data)
+            serializer = EventDetailResponseSerializer(data)
+            return Response(serializer.data)
         except Event.DoesNotExist:
             return Response({"message": "행사를 찾을 수 없습니다."}, status=404)
-            
+
+@extend_schema(tags=["events"])        
 class EventSeatsAPIView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]

@@ -23,7 +23,7 @@ from django.http import JsonResponse
 import qrcode
 from io import BytesIO
 
-
+@extend_schema(tags=["tickets"])
 class FaceRegisterAPIView(APIView):
     @extend_schema(
         summary="티켓 얼굴 등록 상태 변경",
@@ -174,7 +174,7 @@ class FaceRegisterAPIView(APIView):
                 content_type="application/json; charset=UTF-8"
             )
 
-
+@extend_schema(tags=["tickets"])
 class TicketFaceVerifyView(APIView):
     @extend_schema(
         summary="티켓 얼굴 인증",
@@ -261,7 +261,7 @@ class TicketFaceVerifyView(APIView):
                 'face_verified': False
             }, status=status.HTTP_200_OK)
 
-
+@extend_schema(tags=["tickets"])
 class TicketFaceAuthAPIView(APIView):
     @extend_schema(
         summary="티켓 얼굴 등록 상태 조회",
@@ -361,7 +361,7 @@ class TicketFaceAuthAPIView(APIView):
                 content_type="application/json; charset=UTF-8"
             )
 
-            # 나의 티켓 전체 조회
+@extend_schema(tags=["tickets"])
 class MyTicketListView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -377,7 +377,7 @@ class MyTicketListView(APIView):
         serializer = TicketSerializer(tickets, many=True)
         return Response(serializer.data)
 
-# 티켓 상세정보 조회
+@extend_schema(tags=["tickets"])
 class TicketDetailView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -418,7 +418,7 @@ class TicketDetailView(APIView):
         serializer = TicketSerializer(ticket)
         return Response(serializer.data)
 
-# 티켓 취소
+@extend_schema(tags=["tickets"])
 class TicketCancelView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -468,6 +468,7 @@ class TicketCancelView(APIView):
         serializer = TicketSerializer(ticket)
         return Response(serializer.data)
 
+@extend_schema(tags=["tickets"])
 class ShareTicketsView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -578,6 +579,7 @@ class ShareTicketsView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+@extend_schema(tags=["tickets"])
 class AWSFaceRecognitionView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -795,6 +797,7 @@ class AWSFaceRecognitionView(APIView):
 
 
 # 등록된 얼굴 목록 반환 API
+@extend_schema(tags=["tickets"])
 class FaceListAPIView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -862,6 +865,7 @@ class FaceListAPIView(APIView):
             return Response({'message': '목록 불러오기 실패', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # 얼굴 삭제 API
+@extend_schema(tags=["tickets"])
 class FaceDeleteAPIView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -931,6 +935,7 @@ class FaceDeleteAPIView(APIView):
         except Exception as e:
             return Response({'message': '삭제 실패', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@extend_schema(tags=["tickets"])
 class TicketQRView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
@@ -975,7 +980,7 @@ class TicketQRView(APIView):
             return JsonResponse({'error': '티켓이 존재하지 않거나 접근 권한이 없습니다.'}, status=404)
 
         #    
-        qr_url = f"http://localhost:8000/api/v1/tickets/{ticket.id}/checkin"
+        qr_url = f"http://52.79.184.120:8000/api/v1/tickets/{ticket.id}/checkin"
 
         qr_img = qrcode.make(qr_url)
         buffer = BytesIO()

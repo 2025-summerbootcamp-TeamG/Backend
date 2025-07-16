@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
 from events.views import EventListAPIView, EventDetailAPIView, EventSeatsAPIView, BuyTicketsView, PayTicketView
-from tickets.views import FaceRegisterAPIView, TicketFaceAuthAPIView, AWSFaceRecognitionView, face_register_page
-from tickets.views import FaceListAPIView, FaceDeleteAPIView, ShareTicketsView, TicketQRView, checkin_ticket_view
+from tickets.views import FaceRegisterAPIView, TicketFaceAuthAPIView, AWSFaceRecognitionView, face_register_page, MyTicketListView
+from tickets.views import FaceListAPIView, FaceDeleteAPIView, ShareTicketsView, TicketQRView, checkin_ticket_view, TicketDetailView, TicketCancelView
 from user.views import UserSignupView, UserLoginView, UserLogoutView
 
 from django.conf import settings
@@ -27,6 +27,9 @@ urlpatterns = [
     path('api/v1/tickets/<int:purchase_id>/share/', ShareTicketsView.as_view(), name='share-tickets'),
     path('api/v1/tickets/<int:ticket_id>/auth/', TicketFaceAuthAPIView.as_view(), name='ticket-face-auth'),
     path('api/v1/tickets/face-recognition/', AWSFaceRecognitionView.as_view(), name='face-recognition'),
+    path('api/v1/tickets/', MyTicketListView.as_view(), name='myticket-list'),
+    path('api/vi/tickets/<int:ticket_id>/', TicketDetailView.as_view(), name='ticket-detail'),
+    path('api/vi/tickets/<int:ticket_id>/', TicketCancelView.as_view(), name='ticket-cancel'),
     path('api/v1/tickets/<int:ticket_id>/qr', TicketQRView.as_view(), name='ticket-qr'),
     path('api/v1/user/signup/', UserSignupView.as_view(), name='signup'),
     path('api/v1/user/login/', UserLoginView.as_view(), name='login'),

@@ -64,7 +64,8 @@ class EventScheduleSerializer(serializers.Serializer):
     
 class EventDetailResponseSerializer(serializers.Serializer):
     id = serializers.IntegerField()
-    title = serializers.CharField()
+    name = serializers.CharField()
+    artist = serializers.CharField()
     date = serializers.CharField(allow_null=True)
     location = serializers.CharField()
     price = serializers.CharField()
