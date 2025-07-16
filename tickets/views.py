@@ -935,6 +935,37 @@ class TicketQRView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
+    @extend_schema(
+        summary="티켓 QR 코드 생성",
+        description="티켓 ID로 QR 코드를 생성하여 base64 인코딩된 이미지를 반환합니다.",
+        parameters=[
+            OpenApiParameter(name='ticket_id', description='티켓 ID', required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "Success",
+                        value={"qr_base64": "iVBORw0KGgoAAAANSUhEUgAA..."},
+                        status_codes=["200"]
+                    )
+                ]
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="티켓 없음/권한 없음",
+                examples=[
+                    OpenApiExample(
+                        "NotFoundOrForbidden",
+                        value={"error": "티켓이 존재하지 않거나 접근 권한이 없습니다."},
+                        status_codes=["404"]
+                    )
+                ]
+            ),
+        }
+    )
     def get(self, request, ticket_id):
         user = request.user
 
