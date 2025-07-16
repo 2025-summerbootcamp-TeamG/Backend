@@ -35,6 +35,6 @@ jobs:
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           script: |
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/tecker-backend:dev-latest
-            cd /home/ubuntu/backend
+            cd /home/ubuntu/Backend
             docker-compose down
             docker-compose up -d
