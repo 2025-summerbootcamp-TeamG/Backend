@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>티켓 정보 확인</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 30px;
+        }
+        .ticket-box {
+            border: 2px solid #333;
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .ticket-box h2 {
+            text-align: center;
+        }
+        .ticket-info p {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="ticket-box">
+        <h2>🎟️ 입장 티켓</h2>
+        <div class="ticket-info">
+            <p><strong>이름:</strong> {{ username }}</p>
+            <p><strong>공연명:</strong> {{ event_name }}</p>
+            <p><strong>공연일:</strong> {{ event_date }}</p>
+            <p><strong>공연시간:</strong> {{ event_time }}</p>
+            <p><strong>좌석 등급:</strong> {{ zone }}</p>
+            <p><strong>좌석 번호:</strong> {{ seat_number }}</p>
+        </div>
+    </div>
+</body>
+</html>
