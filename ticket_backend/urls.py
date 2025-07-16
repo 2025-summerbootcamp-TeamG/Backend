@@ -8,21 +8,13 @@ from user.views import UserSignupView, UserLoginView, UserLogoutView
 from django.conf import settings
 from django.conf.urls.static import static
 
-from drf_yasg.views import get_schema_view
-from drf_yasg import openapi
-from rest_framework.permissions import AllowAny
-
-schema_view = get_schema_view(
-    openapi.Info(
-        title="weheproject API",  # 타이틀
-        default_version='v1',   # 버전
-        description="API for weheproject",   # 설명
-        terms_of_service="API약관",
-        contact=openapi.Contact(email="이메일") # 입력하지않고 삭제해도 되는 부분
-    ),
-    public=True,
-    permission_classes=(AllowAny,)
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+    SpectacularRedocView,
 )
+
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -41,9 +33,9 @@ urlpatterns = [
 
     path('api/v1/tickets/face-register/', face_register_page, name='face-register'),
 
-    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/docs/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
 ]
 

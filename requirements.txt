@@ -10,4 +10,5 @@ python-dotenv       # .env를 직접 불러오는 방식
 mysqlclient         # python이 mysql db에 접속할 수 있게 함
 djangorestframework-simplejwt
 requests
-drf-yasg            # 스웨거 패키지
+drf-spectacular     # 스웨거 패키지
+drf-spectacular-sidecar
