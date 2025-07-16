@@ -30,11 +30,11 @@ jobs:
       - name: Deploy to dev server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.DEV_SERVER_IP }}    #여기다가 백엔드 서버 ip 유저이름 ssh_key 넣으면 됨
+          host: ${{ secrets.DEV_SERVER_IP }}
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           script: |
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/tecker-backend:dev-latest
-            cd /path/to/your/dev/project
+            cd /home/ubuntu/backend
             docker-compose down
             docker-compose up -d
