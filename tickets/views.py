@@ -18,6 +18,9 @@ import os
 import requests
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.http import JsonResponse
+import qrcode
+from io import BytesIO
 
 
 class FaceRegisterAPIView(APIView):
@@ -436,7 +439,47 @@ class FaceDeleteAPIView(APIView):
         except Exception as e:
             return Response({'message': '삭제 실패', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class TicketQRView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
+    def get(self, request, ticket_id):
+        user = request.user
+
+        try:
+            ticket = Ticket.objects.select_related('user', 'seat__zone__event_time').get(id=ticket_id, user=user)
+        except Ticket.DoesNotExist:
+            return JsonResponse({'error': '티켓이 존재하지 않거나 접근 권한이 없습니다.'}, status=404)
+
+        #    
+        qr_url = f"http://localhost:8000/api/v1/tickets/{ticket.id}/checkin"
+
+        qr_img = qrcode.make(qr_url)
+        buffer = BytesIO()
+        qr_img.save(buffer, format="PNG")
+        image_data = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+        return JsonResponse({"qr_base64": image_data})
+
+
+
+# 2. 스태프용 티켓 확인 페이지 (HTML 렌더링)
+def checkin_ticket_view(request, ticket_id):
+    try:
+        ticket = Ticket.objects.select_related('user', 'seat__zone__event_time').get(id=ticket_id)
+    except Ticket.DoesNotExist:
+        return render(request, 'invalid_ticket.html', status=404)
+
+    context = {
+        'username': ticket.user.name,
+        'event_date': ticket.seat.zone.event_time.event_date.strftime("%Y-%m-%d"),
+        'seat_number': ticket.seat.seat_number,
+        'zone': ticket.seat.zone.rank,
+        'event_time': ticket.seat.zone.event_time.start_time.strftime("%H:%M"),
+        'event_name': ticket.seat.zone.event_time.event.name,
+    }
+
+    return render(request, 'checkin_ticket.html', context)
 
 def face_register_page(request):
     return render(request, 'face_register.html')
