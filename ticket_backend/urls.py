@@ -35,6 +35,8 @@ urlpatterns = [
     path('api/v1/tickets/<int:ticket_id>/checkin', checkin_ticket_view, name='ticket-checkin'),
 
     path('api/v1/tickets/face-register/', face_register_page, name='face-register'),
+    path('api/v1/tickets/face-list/', FaceListAPIView.as_view(), name='face-list'),
+    path('api/v1/tickets/face-delete/', FaceDeleteAPIView.as_view(), name='face-delete'),
 
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
