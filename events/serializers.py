@@ -20,7 +20,8 @@ class ZoneSerializer(serializers.ModelSerializer):
 
 class EventListSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='pk')
-    title = serializers.CharField(source='artist')
+    title = serializers.CharField(source='name')           # 타이틀은 행사명!
+    artist = serializers.CharField()                       # 출연진 정보
     location = serializers.CharField()
     date = serializers.SerializerMethodField()
     thumbnail = serializers.CharField(source='image_url')
@@ -31,7 +32,7 @@ class EventListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = [
-            'id', 'title', 'location', 'date', 'thumbnail', 'price', 'status', 'tag'
+            'id', 'title', 'artist', 'location', 'date', 'thumbnail', 'price', 'status', 'tag'
         ]
 
     def get_date(self, obj):
@@ -46,7 +47,7 @@ class EventListSerializer(serializers.ModelSerializer):
         return "예약가능"
 
     def get_tag(self, obj):
-        return "인기" 
+        return "인기"
 
 class EventListResponseSerializer(serializers.Serializer):
     page = serializers.IntegerField()
@@ -110,9 +111,4 @@ class PayTicketResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
 
 
-class ErrorResponseSerializer(serializers.Serializer):
-    error = serializers.CharField(required=False)
-    message = serializers.CharField(required=False)
-    statusCode = serializers.IntegerField(required=False)
-    data = serializers.JSONField(required=False)
 
