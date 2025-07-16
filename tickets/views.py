@@ -19,6 +19,7 @@ import requests
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
+
 class FaceRegisterAPIView(APIView):
     def patch(self, request, ticket_id):
         try:
@@ -434,6 +435,7 @@ class FaceDeleteAPIView(APIView):
             return Response({'message': '삭제 성공'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'message': '삭제 실패', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 def face_register_page(request):

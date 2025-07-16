@@ -27,7 +27,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',  # Django REST Framework
-    'drf_yasg',  # Swagger
+    'drf_spectacular',  # swagger
+    'drf_spectacular_sidecar',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'tickets',  # tickets 앱 추가
@@ -45,7 +46,10 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+
 
 SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
@@ -125,9 +129,9 @@ AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 
 
-SWAGGER_SETTINGS = {
-    'USE_SESSION_AUTH': False,  # 세션 로그인 비활성화
-    'LOGIN_URL': '/api/v1/user/login/',
-    'LOGOUT_URL': '/api/v1/user/logout/',
-    'DEFAULT_INFO': 'ticket_backend.urls.schema_view',  # Optional
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Your Project API',
+    'DESCRIPTION': 'API documentation for your ticketing project.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
