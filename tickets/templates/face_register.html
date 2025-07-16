@@ -3,56 +3,133 @@
 <head>
     <title>얼굴 등록 시스템</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 600px; margin: 0 auto; }
-        .camera { margin: 20px 0; }
-        #video { width: 100%; border: 2px solid #ccc; }
-        .btn { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; cursor: pointer; }
-        .btn:hover { background: #0056b3; }
-        .result { margin: 20px 0; padding: 10px; border-radius: 5px; }
-        .success { background: #d4edda; color: #155724; }
-        .error { background: #f8d7da; color: #721c24; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f4f6fa; }
+        .container { max-width: 420px; min-width: 0; width: 100%; box-sizing: border-box; margin: 32px auto; background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); padding: 22px 24px 18px 24px; }
+        h1 { text-align: center; margin-bottom: 24px; font-size: 1.5em; color: #222; letter-spacing: 1px; }
+        .section { margin-bottom: 28px; }
+        @media (max-width: 600px) {
+            .container { max-width: 98vw; padding: 12px 2vw 10px 2vw; }
+            h1 { font-size: 1.15em; }
+            .section-title { font-size: 1em; }
+        }
+        .section-title { display: flex; align-items: center; font-size: 1.08em; font-weight: 600; color: #2d3a4a; margin-bottom: 10px; gap: 7px; }
+        .section-title .icon { font-size: 1.15em; }
+        .camera { text-align: center; margin-bottom: 10px; }
+        #video { width: 100%; max-width: 320px; min-width: 180px; border-radius: 8px; border: 1.5px solid #e0e0e0; }
+        .btn { padding: 8px 0.9em; min-width: 80px; background: #1976d2; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; transition: background 0.15s; }
+        .btn:hover { background: #1256a3; }
+        .input-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+        .input-row > * { flex: 1 1 120px; min-width: 0; }
+        input[type="text"], input[type="number"], input[type="password"] {
+            padding: 8px; border: 1px solid #cfd8dc; border-radius: 4px; width: 100%; font-size: 1em; background: #f8fafc;
+            min-width: 0; box-sizing: border-box;
+        }
+        @media (max-width: 480px) {
+            .input-row { flex-direction: column; gap: 6px; }
+            .btn { width: 100%; min-width: 0; }
+        }
+        .result { margin: 16px 0 0 0; padding: 10px; border-radius: 5px; font-size: 0.97em; }
+        .success { background: #e3f6e8; color: #256029; }
+        .error { background: #ffeaea; color: #b71c1c; }
+        ul#face-list { padding-left: 18px; margin-top: 8px; }
+        ul#face-list li { margin-bottom: 6px; font-size: 0.96em; }
+        .token-box { background: #f1f1f1; padding: 7px; border-radius: 4px; word-break: break-all; margin-top: 6px; }
+        .sub-label { font-size: 0.96em; color: #6a7a8c; margin-bottom: 4px; display: block; }
+        .center { text-align: center; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>얼굴 등록 시스템</h1>
-        
-        <div class="camera">
-            <video id="video" autoplay></video>
-            <canvas id="canvas" style="display: none;"></canvas>
+
+        <!-- 로그인 섹션 -->
+        <!-- [로그인 폼] 이메일/비밀번호 입력 및 로그인 버튼, 결과 메시지, 토큰 복사 UI -->
+        <div class="section">
+            <div class="section-title"><span class="icon">🔑</span>로그인</div>
+            <div class="input-row">
+                <input type="text" id="login_email" placeholder="이메일" />
+                <input type="password" id="login_password" placeholder="비밀번호" />
+            </div>
+            <div class="input-row">
+                <button class="btn" onclick="login()">로그인</button>
+            </div>
+            <div id="login_result"></div>
+            <div id="token_box" class="token-box" style="display:none;"></div>
         </div>
-        
-        <div>
-            <button class="btn" onclick="startCamera()">카메라 시작</button>
-            <button class="btn" onclick="captureFace()">얼굴 등록</button>
-            <button class="btn" onclick="verifyFace()">얼굴 인증</button>
+
+        <!-- 회원가입 섹션 -->
+        <!-- [회원가입 폼] 이름, 전화번호, 이메일, 비밀번호, 비밀번호 확인 입력 및 회원가입 버튼, 결과 메시지 -->
+        <div class="section">
+            <div class="section-title"><span class="icon">📝</span>회원가입</div>
+            <div class="input-row">
+                <input type="text" id="signup_name" placeholder="이름" />
+                <input type="text" id="signup_phone" placeholder="전화번호" />
+            </div>
+            <div class="input-row">
+                <input type="text" id="signup_email" placeholder="이메일" />
+                <input type="password" id="signup_password" placeholder="비밀번호" />
+                <input type="password" id="signup_password2" placeholder="비밀번호 확인" />
+            </div>
+            <div class="input-row">
+                <button class="btn" onclick="signup()">회원가입</button>
+            </div>
+            <div id="signup_result"></div>
         </div>
-        
-        <!-- 티켓 얼굴 등록 상태 확인 UI -->
-        <div style="margin-top:20px;">
-            <input type="number" id="auth_ticket_id" placeholder="티켓 ID 입력" style="padding:8px; width:120px;" />
-            <button class="btn" onclick="checkFaceAuth()">얼굴 등록 상태 확인</button>
+
+        <!-- 카메라 -->
+        <!-- [카메라 영역] 비디오 스트림, 얼굴 가이드라인(타원), 안내문구, 카메라 시작 버튼 -->
+        <div class="section">
+            <div class="section-title"><span class="icon">📷</span>카메라</div>
+            <div class="camera" style="position:relative; width:320px; height:240px; margin:0 auto;">
+                <video id="video" autoplay style="width:100%; height:100%; border-radius:10px; z-index:1; background:#000;"></video>
+                <canvas id="canvas" style="display:none"></canvas>
+                <div id="face-guide" style="
+                    position:absolute; left:0; top:0; width:100%; height:100%;
+                    pointer-events:none; z-index:2;">
+                    <svg width="100%" height="100%">
+                        <!-- [가이드라인 타원] 실제 인식 타원보다 넓게 표시됨 -->
+                        <ellipse cx="50%" cy="50%" rx="28%" ry="46%" style="fill:none;stroke:#e74c3c;stroke-width:3;stroke-dasharray:7 5"/>
+                    </svg>
+                </div>
+                <div style="
+                    position:absolute; left:50%; bottom:12px; transform:translateX(-50%);
+                    background:#fff; border-radius:18px; padding:6px 18px; font-size:0.98em; color:#222; box-shadow:0 2px 8px #0001; z-index:3;">
+                    카메라를 정면으로 바라봐 주세요
+                </div>
+            </div>
+            <div class="center">
+                <button class="btn" onclick="startCamera()">카메라 시작</button>
+            </div>
         </div>
-        
-        <!-- 얼굴 등록/인증용 ticket_id, user_id 입력 UI 추가 -->
-        <div style="margin-top:20px;">
-            <input type="number" id="register_ticket_id" placeholder="등록할 티켓 ID" style="padding:8px; width:120px;" />
-            <input type="number" id="register_user_id" placeholder="유저 ID" style="padding:8px; width:120px;" />
+
+        <!-- 토큰 기반 얼굴 등록 -->
+        <div class="section">
+            <div class="section-title"><span class="icon">🔑</span>토큰으로 얼굴 등록</div>
+            <span class="sub-label">Access token을 입력하고, 카메라로 얼굴을 캡처한 뒤 등록하세요.</span>
+            <div class="input-row">
+                <input type="text" id="register_token" placeholder="Access Token 입력" />
+                <button class="btn" onclick="registerFaceWithJwtToken()">등록</button>
+            </div>
         </div>
-        <!-- 얼굴 인증용 ticket_id, user_id 입력 UI 추가 -->
-        <div style="margin-top:10px;">
-            <input type="number" id="verify_ticket_id" placeholder="인증할 티켓 ID" style="padding:8px; width:120px;" />
-            <input type="number" id="verify_user_id" placeholder="유저 ID" style="padding:8px; width:120px;" />
+
+        <!-- 얼굴 인증 -->
+        <div class="section">
+            <div class="section-title"><span class="icon">🛡️</span>얼굴 인증</div>
+            <div class="input-row">
+                <input type="number" id="verify_ticket_id" placeholder="인증할 티켓 ID" />
+                <button class="btn" onclick="verifyFace()">인증</button>
+            </div>
         </div>
-        
-        <!-- 등록된 얼굴 목록 표시 영역 추가 -->
-        <div style="margin-top:30px;">
-            <h3>등록된 얼굴 목록 (ExternalImageId)</h3>
-            <button class="btn" onclick="loadFaceList()">목록 새로고침</button>
-            <ul id="face-list" style="margin-top:10px;"></ul>
+
+        <!-- 등록된 얼굴 목록 -->
+        <div class="section">
+            <div class="section-title"><span class="icon">📄</span>등록된 얼굴 목록</div>
+            <div class="center">
+                <button class="btn" onclick="loadFaceList()">목록 새로고침</button>
+            </div>
+            <ul id="face-list"></ul>
         </div>
-        
+
         <div id="result"></div>
     </div>
 
@@ -60,6 +137,7 @@
         let stream = null;
         let registeredFace = null;
 
+        // [카메라 시작] 버튼 클릭 시 카메라 스트림을 비디오에 연결
         async function startCamera() {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -70,140 +148,142 @@
             }
         }
 
-        function captureFace() {
+        // [얼굴 등록] 버튼 클릭 시: 가이드라인 체크 후, 토큰에서 user_id 추출, 캡처, 서버로 등록 요청
+        async function registerFaceWithJwtToken() {
+            await checkFaceInEllipse();
+            if (!faceInEllipse) {
+                showResult('얼굴을 가이드라인 안에 맞춰주세요.', 'error');
+                return;
+            }
+            const token = document.getElementById('register_token').value;
+            if (!token) {
+                showResult('Access Token을 입력하세요.', 'error');
+                return;
+            }
+            const payload = parseJwt(token); // [JWT 파싱] user_id 추출
+            if (!payload || !payload.user_id) {
+                showResult('유효하지 않은 토큰입니다.', 'error');
+                return;
+            }
+            const userId = payload.user_id;
+            // [얼굴 이미지 캡처]
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
             const context = canvas.getContext('2d');
-            
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0);
-            
-            // 이미지를 base64로 변환
             const imageData = canvas.toDataURL('image/jpeg').split(',')[1];
-            registeredFace = imageData;
-            
-            // 입력값 가져오기
-            const ticketId = document.getElementById('register_ticket_id').value;
-            const userId = document.getElementById('register_user_id').value;
-            if (!ticketId || !userId) {
-                showResult('티켓 ID와 유저 ID를 입력해주세요.', 'error');
+            // 등록할 ticket_id는 인증용 입력란에서 가져옴
+            const ticketId = document.getElementById('verify_ticket_id').value;
+            if (!ticketId) {
+                showResult('인증할 티켓 ID를 입력해주세요.', 'error');
                 return;
             }
-            // 서버에 얼굴 등록 요청
-            registerFaceToServer(imageData, ticketId, userId);
+            registerFaceToServerWithUserAndTicket(imageData, userId, ticketId, token);
         }
 
-        async function registerFaceToServer(imageData, ticketId, userId) {
+        // [얼굴 등록 요청] 서버에 얼굴 이미지, user_id, ticket_id, 토큰을 전송
+        async function registerFaceToServerWithUserAndTicket(imageData, userId, ticketId, token) {
             try {
                 const response = await fetch('/api/v1/tickets/face-recognition/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        image: imageData,
+                        user_id: userId,
+                        ticket_id: ticketId,
+                        action: 'register'
+                    })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showResult('토큰 기반 얼굴 등록 성공!<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
+                } else {
+                    showResult('토큰 기반 얼굴 등록 실패: ' + result.message + '<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'error');
+                }
+            } catch (err) {
+                showResult('서버 오류: ' + err.message, 'error');
+            }
+        }
+
+        // [얼굴 인증] 버튼 클릭 시: 가이드라인 체크 후, 토큰에서 user_id 추출, 캡처, 서버로 인증 요청
+        async function verifyFace() {
+            await checkFaceInEllipse();
+            if (!faceInEllipse) {
+                showResult('얼굴을 가이드라인 안에 맞춰주세요.', 'error');
+                return;
+            }
+            const ticketId = document.getElementById('verify_ticket_id').value;
+            if (!ticketId) {
+                showResult('인증할 티켓 ID를 입력해주세요.', 'error');
+                return;
+            }
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+            const imageData = canvas.toDataURL('image/jpeg').split(',')[1];
+
+            // 토큰에서 user_id 추출
+            const tokenInput = document.getElementById('register_token');
+            const token = (tokenInput && tokenInput.value) ? tokenInput.value : '';
+            const payload = parseJwt(token);
+            if (!payload || !payload.user_id) {
+                showResult('유효한 토큰이 필요합니다.', 'error');
+                return;
+            }
+            const userId = payload.user_id;
+
+            try {
+                const response = await fetch('/api/v1/tickets/face-recognition/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
                     },
                     body: JSON.stringify({
                         image: imageData,
                         ticket_id: ticketId,
                         user_id: userId,
-                        action: 'register'
-                    })
-                });
-                
-                const result = await response.json();
-                if (response.ok) {
-                    showResult('얼굴이 성공적으로 등록되었습니다!<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
-                } else {
-                    showResult('얼굴 등록 실패: ' + result.message + '<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'error');
-                }
-            } catch (err) {
-                showResult('서버 오류: ' + err.message, 'error');
-            }
-        }
-
-        async function verifyFace() {
-            // 입력값 가져오기
-            const ticketId = document.getElementById('verify_ticket_id').value;
-            const userId = document.getElementById('verify_user_id').value;
-            if (!ticketId || !userId) {
-                showResult('인증할 티켓 ID와 유저 ID를 입력해주세요.', 'error');
-                return;
-            }
-
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-            const context = canvas.getContext('2d');
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0);
-            
-            const currentImageData = canvas.toDataURL('image/jpeg').split(',')[1];
-            
-            try {
-                const response = await fetch('/api/v1/tickets/face-recognition/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({
-                        image: currentImageData,
-                        ticket_id: ticketId,
-                        user_id: userId,
                         action: 'verify'
                     })
                 });
-                
                 const result = await response.json();
                 if (response.ok) {
-                    showResult('얼굴 인증 성공!<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
+                    showResult('얼굴 인증 결과:<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
                 } else {
-                    showResult('얼굴 인증 실패: ' + result.message + '<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'error');
+                    showResult('얼굴 인증 실패:<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'error');
                 }
             } catch (err) {
                 showResult('서버 오류: ' + err.message, 'error');
             }
         }
 
+        // [결과 메시지 출력] 성공/실패 메시지를 화면에 표시
         function showResult(message, type) {
             const resultDiv = document.getElementById('result');
             resultDiv.innerHTML = `<div class="result ${type}">${message}</div>`;
         }
 
-        // 티켓 얼굴 등록 상태 확인 함수 추가
-        async function checkFaceAuth() {
-            const ticketId = document.getElementById('auth_ticket_id').value;
-            if (!ticketId) {
-                showResult('티켓 ID를 입력해주세요.', 'error');
-                return;
-            }
-            try {
-                const response = await fetch(`/api/v1/tickets/${ticketId}/auth/`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                const result = await response.json();
-                if (response.ok) {
-                    showResult('티켓 얼굴 등록 상태:<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
-                } else {
-                    showResult('조회 실패: ' + result.message + '<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'error');
-                }
-            } catch (err) {
-                showResult('서버 오류: ' + err.message, 'error');
-            }
-        }
-
-        // 등록된 얼굴 목록 불러오기
+        // [등록된 얼굴 목록 불러오기] 버튼 클릭 시 서버에서 목록 조회
         async function loadFaceList() {
             const listEl = document.getElementById('face-list');
             listEl.innerHTML = '불러오는 중...';
             try {
+                const tokenInput = document.getElementById('register_token');
+                const token = (tokenInput && tokenInput.value) ? tokenInput.value : '';
                 const response = await fetch('/api/v1/tickets/face-list/', {
                     method: 'GET',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    }
                 });
                 const result = await response.json();
                 if (response.ok && result.data) {
@@ -213,7 +293,6 @@
                         listEl.innerHTML = '';
                         result.data.forEach(face => {
                             const li = document.createElement('li');
-                            li.style.marginBottom = '8px';
                             li.innerHTML = `${face.ExternalImageId} <button class='btn' style='padding:4px 10px;font-size:12px;' onclick="deleteFace('${face.FaceId}')">삭제</button>`;
                             listEl.appendChild(li);
                         });
@@ -226,13 +305,18 @@
             }
         }
 
-        // 얼굴 삭제 함수
+        // [얼굴 삭제] 버튼 클릭 시 서버에 삭제 요청
         async function deleteFace(faceId) {
             if (!confirm('정말 삭제하시겠습니까?')) return;
             try {
+                const tokenInput = document.getElementById('register_token');
+                const token = (tokenInput && tokenInput.value) ? tokenInput.value : '';
                 const response = await fetch('/api/v1/tickets/face-delete/', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
                     body: JSON.stringify({ face_id: faceId })
                 });
                 const result = await response.json();
@@ -247,20 +331,262 @@
             }
         }
 
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
+        // [로그인] 버튼 클릭 시: 이메일/비밀번호로 로그인, 토큰 자동 입력 및 복사 UI
+        async function login() {
+            const email = document.getElementById('login_email').value;
+            const password = document.getElementById('login_password').value;
+            if (!email || !password) {
+                showLoginResult('이메일과 비밀번호를 모두 입력하세요.', 'error');
+                return;
             }
-            return cookieValue;
+            try {
+                const response = await fetch('/user/login/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    let token = result.token || result.access || result.key || '';
+                    showLoginResult('로그인 성공!<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
+                    if (token) {
+                        document.getElementById('register_token').value = token;
+                        document.getElementById('token_box').style.display = '';
+                        document.getElementById('token_box').innerHTML = 'Access Token:<br>' + token + '<br><button onclick="copyToken()" class="btn" style="margin-top:6px;">복사</button>';
+                    }
+                } else {
+                    showLoginResult('로그인 실패: ' + (result.message || JSON.stringify(result)), 'error');
+                }
+            } catch (err) {
+                showLoginResult('서버 오류: ' + err.message, 'error');
+            }
         }
+        // [로그인 결과 메시지 출력]
+        function showLoginResult(message, type) {
+            const resultDiv = document.getElementById('login_result');
+            resultDiv.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+        // [회원가입] 버튼 클릭 시: 입력값 검증 후 서버에 회원가입 요청
+        async function signup() {
+            const email = document.getElementById('signup_email').value;
+            const password = document.getElementById('signup_password').value;
+            const password2 = document.getElementById('signup_password2').value;
+            const name = document.getElementById('signup_name').value;
+            const phone = document.getElementById('signup_phone').value;
+            if (!email || !password || !password2 || !name || !phone) {
+                showSignupResult('모든 필드를 입력해주세요.', 'error');
+                return;
+            }
+            if (password !== password2) {
+                showSignupResult('비밀번호가 일치하지 않습니다.', 'error');
+                return;
+            }
+            try {
+                const response = await fetch('/user/signup/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        password2,
+                        name,
+                        phone
+                    })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showSignupResult('회원가입 성공!<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
+                } else {
+                    showSignupResult('회원가입 실패: ' + (result.message || JSON.stringify(result)), 'error');
+                }
+            } catch (err) {
+                showSignupResult('서버 오류: ' + err.message, 'error');
+            }
+        }
+        // [회원가입 결과 메시지 출력]
+        function showSignupResult(message, type) {
+            const resultDiv = document.getElementById('signup_result');
+            resultDiv.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+        // [토큰 복사] 버튼 클릭 시 클립보드에 토큰 복사
+        function copyToken() {
+            const token = document.getElementById('register_token').value;
+            if (token) {
+                navigator.clipboard.writeText(token);
+                alert('토큰이 복사되었습니다!');
+            }
+        }
+
+        // [JWT 파싱] 토큰에서 user_id 추출 (base64 디코딩)
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                return null;
+            }
+        }
+    </script>
+    <!-- 1. face-api.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+    <!-- 2. 내 JS 코드 (defer 필수) -->
+    <script defer>
+    let faceInEllipse = false;
+
+    // [얼굴 가이드라인 체크] 얼굴 중심이 인식 타원(가이드라인보다 더 작은 타원) 안에 완전히 들어와야 true
+    async function checkFaceInEllipse() {
+        const video = document.getElementById('video');
+        if (!video || video.readyState !== 4) {
+            faceInEllipse = false;
+            return;
+        }
+        const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions());
+        if (!detections) {
+            faceInEllipse = false;
+            return;
+        }
+        const box = detections.box;
+        const faceCenterX = box.x + box.width / 2;
+        const faceCenterY = box.y + box.height / 2;
+        const videoW = video.videoWidth;
+        const videoH = video.videoHeight;
+        const ellipseCX = videoW / 2;
+        const ellipseCY = videoH / 2;
+        // [실제 인식 타원] 가이드라인보다 더 작게 설정 (빡빡하게)
+        const rx = videoW * 0.12; // 기존 0.36 → 0.12
+        const ry = videoH * 0.20; // 기존 0.46 → 0.20
+        const normX = (faceCenterX - ellipseCX) / rx;
+        const normY = (faceCenterY - ellipseCY) / ry;
+        faceInEllipse = (normX * normX + normY * normY) <= 1;
+    }
+
+    // [모델 로드 및 주기적 얼굴 위치 체크] 페이지 로드 시 모델 로드, 0.7초마다 체크
+    window.addEventListener('DOMContentLoaded', async function() {
+        await faceapi.nets.tinyFaceDetector.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models');
+        setInterval(checkFaceInEllipse, 700);
+    });
+
+    // 반드시 실제 코드로 함수 선언!
+    async function registerFaceWithJwtToken() {
+        await checkFaceInEllipse();
+        if (!faceInEllipse) {
+            alert('얼굴을 가이드라인 안에 맞춰주세요.');
+            return;
+        }
+        const token = document.getElementById('register_token').value;
+        if (!token) {
+            alert('Access Token을 입력하세요.');
+            return;
+        }
+        const payload = parseJwt(token);
+        if (!payload || !payload.user_id) {
+            alert('유효하지 않은 토큰입니다.');
+            return;
+        }
+        const userId = payload.user_id;
+        // 얼굴 이미지 캡처
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+        const imageData = canvas.toDataURL('image/jpeg').split(',')[1];
+        // 등록할 ticket_id는 인증용 입력란에서 가져옴
+        const ticketId = document.getElementById('verify_ticket_id').value;
+        if (!ticketId) {
+            alert('인증할 티켓 ID를 입력해주세요.');
+            return;
+        }
+        registerFaceToServerWithUserAndTicket(imageData, userId, ticketId, token);
+    }
+
+    async function registerFaceToServerWithUserAndTicket(imageData, userId, ticketId, token) {
+        try {
+            const response = await fetch('/api/v1/tickets/face-recognition/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({
+                    image: imageData,
+                    user_id: userId,
+                    ticket_id: ticketId,
+                    action: 'register'
+                })
+            });
+            const result = await response.json();
+            if (response.ok) {
+                alert('토큰 기반 얼굴 등록 성공!<br><pre>' + JSON.stringify(result, null, 2) + '</pre>');
+            } else {
+                alert('토큰 기반 얼굴 등록 실패: ' + result.message + '<br><pre>' + JSON.stringify(result, null, 2) + '</pre>');
+            }
+        } catch (err) {
+            alert('서버 오류: ' + err.message);
+        }
+    }
+
+    async function verifyFace() {
+        await checkFaceInEllipse();
+        if (!faceInEllipse) {
+            alert('얼굴을 가이드라인 안에 맞춰주세요.');
+            return;
+        }
+        const ticketId = document.getElementById('verify_ticket_id').value;
+        if (!ticketId) {
+            alert('인증할 티켓 ID를 입력해주세요.');
+            return;
+        }
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+        const imageData = canvas.toDataURL('image/jpeg').split(',')[1];
+
+        // 토큰에서 user_id 추출
+        const tokenInput = document.getElementById('register_token');
+        const token = (tokenInput && tokenInput.value) ? tokenInput.value : '';
+        const payload = parseJwt(token);
+        if (!payload || !payload.user_id) {
+            alert('유효한 토큰이 필요합니다.');
+            return;
+        }
+        const userId = payload.user_id;
+
+        try {
+            const response = await fetch('/api/v1/tickets/face-recognition/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({
+                    image: imageData,
+                    ticket_id: ticketId,
+                    user_id: userId,
+                    action: 'verify'
+                })
+            });
+            const result = await response.json();
+            if (response.ok) {
+                alert('얼굴 인증 결과:<br><pre>' + JSON.stringify(result, null, 2) + '</pre>');
+            } else {
+                alert('얼굴 인증 실패:<br><pre>' + JSON.stringify(result, null, 2) + '</pre>');
+            }
+        } catch (err) {
+            alert('서버 오류: ' + err.message);
+        }
+    }
+
+    // 기타 함수들도 마찬가지로 실제 코드로 선언
     </script>
 </body>
 </html>

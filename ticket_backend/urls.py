@@ -29,7 +29,6 @@ urlpatterns = [
     path('api/v1/events/<int:zone_id>/seats/', EventSeatsAPIView.as_view(), name='event-seats'),
     path('events/<int:event_id>/tickets/buy', BuyTicketsView.as_view()),
     path('events/<int:purchase_id>/tickets/pay', PayTicketView.as_view(), name='pay-ticket'),
-    path('api/v1/tickets/<int:ticket_id>/register/', FaceRegisterAPIView.as_view()),
     path('api/v1/tickets/<int:ticket_id>/auth/', TicketFaceAuthAPIView.as_view()),
     path('tickets/<int:purchase_id>/share', ShareTicketsView.as_view(), name='share-tickets'),
     path('api/v1/tickets/<int:ticket_id>/register/', FaceRegisterAPIView.as_view(), name='ticket-face-register'),
@@ -39,5 +38,7 @@ urlpatterns = [
     path('user/signup/', UserSignupView.as_view(), name='signup'),
     path('user/login/', UserLoginView.as_view(), name='login'),
     path('user/logout/', UserLogoutView.as_view(), name='logout'),
+    path('api/v1/tickets/face-list/', FaceListAPIView.as_view(), name='face-list'),
+    path('api/v1/tickets/face-delete/', FaceDeleteAPIView.as_view(), name='face-delete'),
 ]
 

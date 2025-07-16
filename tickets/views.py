@@ -16,9 +16,12 @@ import io
 from PIL import Image
 import os
 import requests
+from rest_framework.permissions import IsAuthenticated
 
 
 class FaceRegisterAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def patch(self, request, ticket_id):
         try:
             ticket = Ticket.objects.get(id=ticket_id)
@@ -34,20 +37,18 @@ class FaceRegisterAPIView(APIView):
 
         try:
             face_verified = request.data.get('face_verified')
-            user_id = request.data.get('user_id')  # 요청에서 user_id 받기
-
-            if face_verified is None or user_id is None:
+            if face_verified is None:
                 return Response(
                     {
-                        "message": "face_verified와 user_id가 필요합니다",
+                        "message": "face_verified가 필요합니다",
                         "data": None
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                     content_type="application/json; charset=UTF-8"
                 )
 
-            # 티켓의 user_id와 요청의 user_id 비교
-            if str(ticket.user_id) != str(user_id):
+            # 티켓의 user_id와 로그인 유저 비교
+            if ticket.user_id != request.user.id:
                 return Response(
                     {
                         "message": "해당 사용자의 티켓 권한 없음",
@@ -90,18 +91,22 @@ class FaceRegisterAPIView(APIView):
 
 
 class TicketFaceVerifyView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def patch(self, request, pk):
         # AWS Rekognition 결과에서 Face Matches와 User ID 추출
         face_matches = request.data.get('face_matches')  # 예: 95
-        user_id = request.data.get('user_id')
-
-        if face_matches is None or user_id is None:
-            return Response({'error': 'face_matches와 user_id가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        if face_matches is None:
+            return Response({'error': 'face_matches가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             ticket = Ticket.objects.get(pk=pk)
         except Ticket.DoesNotExist:
             return Response({'error': '티켓을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # 티켓의 user_id와 로그인 유저 비교
+        if ticket.user_id != request.user.id:
+            return Response({'error': '해당 사용자의 티켓 권한 없음.'}, status=status.HTTP_403_FORBIDDEN)
 
         if face_matches >= 95:
             ticket.face_verified = True
@@ -120,6 +125,8 @@ class TicketFaceVerifyView(APIView):
 
 
 class TicketFaceAuthAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, ticket_id):
         try:
             try:
@@ -169,15 +176,17 @@ class TicketFaceAuthAPIView(APIView):
 
             # 나의 티켓 전체 조회
 class MyTicketListView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
-        # 인증 구현 전까지 user id를 쿼리 파라미터로 받음
-        user_id = request.query_params.get('user_id')
-        tickets = Ticket.objects.filter(user_id=user_id)
+        tickets = Ticket.objects.filter(user_id=request.user.id)
         serializer = TicketSerializer(tickets, many=True)
         return Response(serializer.data)
 
 # 티켓 상세정보 조회
 class TicketDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, ticket_id):
         ticket = get_object_or_404(Ticket, id=ticket_id)
         serializer = TicketSerializer(ticket)
@@ -185,6 +194,8 @@ class TicketDetailView(APIView):
 
 # 티켓 취소
 class TicketCancelView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def patch(self, request, ticket_id):
         ticket = get_object_or_404(Ticket, id=ticket_id)
         ticket.ticket_status = 'canceled'
@@ -200,13 +211,14 @@ class TicketCancelView(APIView):
         return Response(serializer.data)
 
 class ShareTicketsView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, purchase_id):
         data = request.data
-        user_id = data.get("user_id")
         ticket_user_emails = data.get("ticket_user_emails")
 
-        if not user_id or not isinstance(ticket_user_emails, list):
-            return Response({"error": "user_id and ticket_user_emails are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(ticket_user_emails, list):
+            return Response({"error": "ticket_user_emails is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             with transaction.atomic():
@@ -219,7 +231,7 @@ class ShareTicketsView(APIView):
                 shared_user_ids = [email_to_user_id[email] for email in ticket_user_emails]
 
                 # 모든 티켓 가져오기 (본인 user_id로 등록된)
-                tickets = list(Ticket.objects.select_for_update().filter(purchase__id=purchase_id, user_id=user_id).order_by('id'))
+                tickets = list(Ticket.objects.select_for_update().filter(purchase__id=purchase_id, user_id=request.user.id).order_by('id'))
 
                 if len(tickets) != 1 + len(shared_user_ids):
                     return Response({
@@ -229,7 +241,7 @@ class ShareTicketsView(APIView):
                             "shared_users_count": len(shared_user_ids),
                             "required_tickets": 1 + len(shared_user_ids),
                             "purchase_id": purchase_id,
-                            "user_id": user_id
+                            "user_id": request.user.id
                         }
                     }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -250,6 +262,8 @@ class ShareTicketsView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class AWSFaceRecognitionView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         try:
             action = request.data.get('action')
@@ -334,7 +348,11 @@ class AWSFaceRecognitionView(APIView):
                 # FaceMatches 중 ExternalImageId가 일치하는 것만 필터링
                 matched_face = None
                 for match in response.get('FaceMatches', []):
-                    if match['Face'].get('ExternalImageId') == external_image_id:
+                    # match['external_image_id'] 또는 match['Face']['ExternalImageId'] 등 실제 응답 구조 확인 필요
+                    ext_id = match.get('external_image_id') or match.get('ExternalImageId')
+                    if not ext_id and 'Face' in match:
+                        ext_id = match['Face'].get('ExternalImageId')
+                    if ext_id == external_image_id:
                         matched_face = match
                         break
 
@@ -372,6 +390,8 @@ class AWSFaceRecognitionView(APIView):
 
 # 등록된 얼굴 목록 반환 API
 class FaceListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         try:
             rekognition = boto3.client(
@@ -403,6 +423,8 @@ class FaceListAPIView(APIView):
 
 # 얼굴 삭제 API
 class FaceDeleteAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         face_id = request.data.get('face_id')
         if not face_id:
