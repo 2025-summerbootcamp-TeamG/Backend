@@ -14,10 +14,10 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: ticketing
-          MYSQL_USER: ticketuser
-          MYSQL_PASSWORD: ticketpass
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         ports:
           - 3306:3306
         options: >-
@@ -38,18 +38,18 @@ jobs:
 
       - name: Wait for MySQL
         run: |
-          until mysqladmin ping -h "127.0.0.1" -u"ticketuser" -p"ticketpass" --silent; do
+          until mysqladmin ping -h "$MYSQL_HOST" -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --silent; do
             sleep 2
           done
 
       - name: Run migrations
         env:
-          DJANGO_SECRET_KEY: test-secret-key
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           DEBUG: "False"
-          MYSQL_DATABASE: ticketing
-
-          MYSQL_USER: ticketuser
-          MYSQL_PASSWORD: ticketpass
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           MYSQL_HOST: 127.0.0.1
           MYSQL_PORT: 3306
         run: |
@@ -57,11 +57,12 @@ jobs:
 
       - name: Run tests
         env:
-          DJANGO_SECRET_KEY: test-secret-key
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           DEBUG: "False"
-          MYSQL_DATABASE: ticketing
-          MYSQL_USER: ticketuser
-          MYSQL_PASSWORD: ticketpass
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           MYSQL_HOST: 127.0.0.1
           MYSQL_PORT: 3306
         run: |
