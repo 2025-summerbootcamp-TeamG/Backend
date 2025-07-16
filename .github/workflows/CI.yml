@@ -38,12 +38,13 @@ jobs:
 
       - name: Wait for MySQL
         run: |
-          until mysqladmin ping -h "$MYSQL_HOST" -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --silent; do
+          until mysqladmin ping -h "127.0.0.1" -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --silent; do
             sleep 2
           done
 
       - name: Run migrations
         env:
+        
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           DEBUG: "False"
           MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
