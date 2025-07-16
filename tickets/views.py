@@ -27,15 +27,14 @@ from io import BytesIO
 class FaceRegisterAPIView(APIView):
     @extend_schema(
         summary="티켓 얼굴 등록 상태 변경",
-        description="티켓에 얼굴 등록 여부(face_verified)와 user_id를 받아 상태를 변경합니다.",
+        description="티켓에 얼굴 등록 여부(face_verified)만 받아 상태를 변경합니다. user_id는 토큰(JWT) 인증에서 추출합니다.",
         request={
             'application/json': {
                 'type': 'object',
                 'properties': {
                     'face_verified': {'type': 'boolean', 'description': '얼굴 등록 여부'},
-                    'user_id': {'type': 'integer', 'description': '유저 ID'}
                 },
-                'required': ['face_verified', 'user_id']
+                'required': ['face_verified']
             }
         },
         parameters=[
@@ -68,7 +67,7 @@ class FaceRegisterAPIView(APIView):
                 examples=[
                     OpenApiExample(
                         "BadRequest",
-                        value={"message": "face_verified와 user_id가 필요합니다", "data": None},
+                        value={"message": "face_verified가 필요합니다", "data": None},
                         status_codes=["400"]
                     )
                 ]
@@ -123,20 +122,18 @@ class FaceRegisterAPIView(APIView):
 
         try:
             face_verified = request.data.get('face_verified')
-            user_id = request.data.get('user_id')  # 요청에서 user_id 받기
-
-            if face_verified is None or user_id is None:
+            if face_verified is None:
                 return Response(
                     {
-                        "message": "face_verified와 user_id가 필요합니다",
+                        "message": "face_verified가 필요합니다",
                         "data": None
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                     content_type="application/json; charset=UTF-8"
                 )
 
-            # 티켓의 user_id와 요청의 user_id 비교
-            if str(ticket.user_id) != str(user_id):
+            # 티켓의 user_id와 로그인 유저 비교
+            if ticket.user_id != request.user.id:
                 return Response(
                     {
                         "message": "해당 사용자의 티켓 권한 없음",
@@ -181,15 +178,14 @@ class FaceRegisterAPIView(APIView):
 class TicketFaceVerifyView(APIView):
     @extend_schema(
         summary="티켓 얼굴 인증",
-        description="AWS Rekognition 결과(face_matches, user_id)로 티켓 얼굴 인증 처리.",
+        description="AWS Rekognition 결과(face_matches)로 티켓 얼굴 인증 처리. user_id는 토큰(JWT) 인증에서 추출합니다.",
         request={
             'application/json': {
                 'type': 'object',
                 'properties': {
                     'face_matches': {'type': 'integer', 'description': '얼굴 유사도(%)'},
-                    'user_id': {'type': 'integer', 'description': '유저 ID'}
                 },
-                'required': ['face_matches', 'user_id']
+                'required': ['face_matches']
             }
         },
         parameters=[
@@ -218,7 +214,7 @@ class TicketFaceVerifyView(APIView):
                 examples=[
                     OpenApiExample(
                         "BadRequest",
-                        value={"error": "face_matches와 user_id가 필요합니다."},
+                        value={"error": "face_matches가 필요합니다."},
                         status_codes=["400"]
                     )
                 ]
@@ -237,17 +233,18 @@ class TicketFaceVerifyView(APIView):
         }
     )
     def patch(self, request, pk):
-        # AWS Rekognition 결과에서 Face Matches와 User ID 추출
         face_matches = request.data.get('face_matches')  # 예: 95
-        user_id = request.data.get('user_id')
-
-        if face_matches is None or user_id is None:
-            return Response({'error': 'face_matches와 user_id가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        if face_matches is None:
+            return Response({'error': 'face_matches가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             ticket = Ticket.objects.get(pk=pk)
         except Ticket.DoesNotExist:
             return Response({'error': '티켓을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # 티켓의 user_id와 로그인 유저 비교
+        if ticket.user_id != request.user.id:
+            return Response({'error': '해당 사용자의 티켓 권한 없음.'}, status=status.HTTP_403_FORBIDDEN)
 
         if face_matches >= 95:
             ticket.face_verified = True
@@ -582,19 +579,21 @@ class ShareTicketsView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class AWSFaceRecognitionView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     @extend_schema(
         summary="AWS Rekognition 얼굴 등록/인증",
-        description="action이 'register'면 얼굴 등록, 'verify'면 얼굴 인증을 수행합니다. (Base64 인코딩 이미지 필요)",
+        description="action이 'register'면 얼굴 등록, 'verify'면 얼굴 인증을 수행합니다. (Base64 인코딩 이미지 필요) user_id는 토큰(JWT) 인증에서 추출합니다.",
         request={
             'application/json': {
                 'type': 'object',
                 'properties': {
                     'action': {'type': 'string', 'enum': ['register', 'verify'], 'description': "'register' 또는 'verify'"},
-                    'user_id': {'type': 'integer', 'description': '유저 ID'},
                     'ticket_id': {'type': 'integer', 'description': '티켓 ID'},
                     'image': {'type': 'string', 'description': 'Base64 인코딩 이미지'}
                 },
-                'required': ['action', 'user_id', 'ticket_id', 'image']
+                'required': ['action', 'ticket_id', 'image']
             }
         },
         responses={
@@ -678,9 +677,9 @@ class AWSFaceRecognitionView(APIView):
     def post(self, request):
         try:
             action = request.data.get('action')
-            user_id = request.data.get('user_id')
             ticket_id = request.data.get('ticket_id')
             image_data = request.data.get('image')
+            user_id = request.user.id
 
             rekognition = boto3.client(
                 'rekognition',
@@ -797,6 +796,9 @@ class AWSFaceRecognitionView(APIView):
 
 # 등록된 얼굴 목록 반환 API
 class FaceListAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     @extend_schema(
         summary="등록된 얼굴 목록 조회",
         description="AWS Rekognition Collection에 등록된 얼굴 목록을 반환합니다.",
@@ -861,6 +863,9 @@ class FaceListAPIView(APIView):
 
 # 얼굴 삭제 API
 class FaceDeleteAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     @extend_schema(
         summary="등록된 얼굴 삭제",
         description="AWS Rekognition Collection에서 FaceId로 얼굴을 삭제합니다.",
