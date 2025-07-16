@@ -194,7 +194,6 @@
                     },
                     body: JSON.stringify({
                         image: imageData,
-                        user_id: userId,
                         ticket_id: ticketId,
                         action: 'register'
                     })
@@ -250,7 +249,6 @@
                     body: JSON.stringify({
                         image: imageData,
                         ticket_id: ticketId,
-                        user_id: userId,
                         action: 'verify'
                     })
                 });
@@ -516,7 +514,6 @@
                 },
                 body: JSON.stringify({
                     image: imageData,
-                    user_id: userId,
                     ticket_id: ticketId,
                     action: 'register'
                 })
@@ -571,7 +568,6 @@
                 body: JSON.stringify({
                     image: imageData,
                     ticket_id: ticketId,
-                    user_id: userId,
                     action: 'verify'
                 })
             });
