@@ -34,6 +34,7 @@ from io import BytesIO
 # - base64 이미지(image) 전달
 # - AWS Rekognition에 user_{user_id}_ticket_{ticket_id}로 등록
 # - 성공 시 FaceId, ExternalImageId 반환
+@extend_schema(tags=["tickets"])
 class AWSFaceRecognitionRegister(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -118,6 +119,7 @@ class AWSFaceRecognitionRegister(APIView):
 # - base64 이미지(image) 전달
 # - AWS Rekognition에서 user_{user_id}_ticket_{ticket_id}로 등록된 얼굴과만 비교
 # - 성공 시 FaceId, ExternalImageId, Similarity 반환
+@extend_schema(tags=["tickets"])
 class AWSFaceRecognitionAuth(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -210,6 +212,7 @@ class AWSFaceRecognitionAuth(APIView):
 # - JWT 토큰 인증 필요
 # - face_verified(boolean)만 입력
 # - DB의 ticket 테이블에 face_verified, verified_at만 저장
+@extend_schema(tags=["tickets"])
 class FaceRegisterAPIView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -341,10 +344,12 @@ class FaceRegisterAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+
 # --- 4. DB 기반 얼굴 등록 상태 조회 ---
 # [GET] /api/v1/tickets/<ticket_id>/auth/
 # - JWT 토큰 인증 필요
 # - DB의 ticket 테이블에서 face_verified, verified_at만 조회
+@extend_schema(tags=["tickets"])
 class TicketFaceAuthAPIView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -446,7 +451,7 @@ class TicketFaceAuthAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-            # 나의 티켓 전체 조회
+@extend_schema(tags=["tickets"])
 class MyTicketListView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -462,7 +467,7 @@ class MyTicketListView(APIView):
         serializer = TicketSerializer(tickets, many=True)
         return Response(serializer.data)
 
-# 티켓 상세정보 조회
+@extend_schema(tags=["tickets"])
 class TicketDetailView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -503,7 +508,7 @@ class TicketDetailView(APIView):
         serializer = TicketSerializer(ticket)
         return Response(serializer.data)
 
-# 티켓 취소
+@extend_schema(tags=["tickets"])
 class TicketCancelView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -553,6 +558,7 @@ class TicketCancelView(APIView):
         serializer = TicketSerializer(ticket)
         return Response(serializer.data)
 
+@extend_schema(tags=["tickets"])
 class ShareTicketsView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -664,6 +670,7 @@ class ShareTicketsView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 # 등록된 얼굴 목록 반환 API
+@extend_schema(tags=["tickets"])
 class FaceListAPIView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -731,6 +738,7 @@ class FaceListAPIView(APIView):
             return Response({'message': '목록 불러오기 실패', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # 얼굴 삭제 API
+@extend_schema(tags=["tickets"])
 class FaceDeleteAPIView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -800,10 +808,42 @@ class FaceDeleteAPIView(APIView):
         except Exception as e:
             return Response({'message': '삭제 실패', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@extend_schema(tags=["tickets"])
 class TicketQRView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
+    @extend_schema(
+        summary="티켓 QR 코드 생성",
+        description="티켓 ID로 QR 코드를 생성하여 base64 인코딩된 이미지를 반환합니다.",
+        parameters=[
+            OpenApiParameter(name='ticket_id', description='티켓 ID', required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "Success",
+                        value={"qr_base64": "iVBORw0KGgoAAAANSUhEUgAA..."},
+                        status_codes=["200"]
+                    )
+                ]
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="티켓 없음/권한 없음",
+                examples=[
+                    OpenApiExample(
+                        "NotFoundOrForbidden",
+                        value={"error": "티켓이 존재하지 않거나 접근 권한이 없습니다."},
+                        status_codes=["404"]
+                    )
+                ]
+            ),
+        }
+    )
     def get(self, request, ticket_id):
         user = request.user
 
@@ -813,7 +853,7 @@ class TicketQRView(APIView):
             return JsonResponse({'error': '티켓이 존재하지 않거나 접근 권한이 없습니다.'}, status=404)
 
         #    
-        qr_url = f"http://localhost:8000/api/v1/tickets/{ticket.id}/checkin"
+        qr_url = f"http://52.79.184.120:8000/api/v1/tickets/{ticket.id}/checkin"
 
         qr_img = qrcode.make(qr_url)
         buffer = BytesIO()

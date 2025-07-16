@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import User
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse, OpenApiTypes
 
+@extend_schema(tags=["user"])
 class UserSignupView(generics.CreateAPIView):
     serializer_class = UserSignupSerializer
     permission_classes = [permissions.AllowAny]
@@ -38,6 +39,7 @@ class UserSignupView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
 
+@extend_schema(tags=["user"])
 class UserLoginView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
     permission_classes = [permissions.AllowAny]
@@ -78,6 +80,7 @@ class UserLoginView(TokenObtainPairView):
         return super().post(request, *args, **kwargs)
 
 
+@extend_schema(tags=["user"])
 class UserLogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
