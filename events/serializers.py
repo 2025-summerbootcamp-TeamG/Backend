@@ -73,6 +73,7 @@ class EventDetailResponseSerializer(serializers.Serializer):
     tag = serializers.CharField()
     description = serializers.CharField()
     schedules = serializers.ListField(child=serializers.DictField())
+    max_reserve = serializers.CharField()
 
 class EventSeatsDataSerializer(serializers.Serializer):
     schedules = EventScheduleSerializer(many=True)
