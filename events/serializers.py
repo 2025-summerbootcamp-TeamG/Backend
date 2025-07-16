@@ -61,7 +61,7 @@ class EventScheduleSerializer(serializers.Serializer):
     date = serializers.CharField()
     start_time = serializers.CharField()
     end_time = serializers.CharField()
-
+    
 class EventDetailResponseSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     title = serializers.CharField()
@@ -71,6 +71,9 @@ class EventDetailResponseSerializer(serializers.Serializer):
     thumbnail = serializers.CharField()
     tag = serializers.CharField()
     description = serializers.CharField()
+    schedules = serializers.ListField(child=serializers.DictField())
+
+class EventSeatsDataSerializer(serializers.Serializer):
     schedules = EventScheduleSerializer(many=True)
 
 
@@ -85,6 +88,9 @@ class SeatInfoSerializer(serializers.Serializer):
 class EventSeatsResponseSerializer(serializers.Serializer):
     statusCode = serializers.IntegerField()
     message = serializers.CharField()
+
+    data = serializers.ListField(child=EventSeatsDataSerializer())
+
     data = SeatInfoSerializer(many=True, allow_null=True)
 
 
@@ -102,6 +108,10 @@ class BuyTicketsResponseSerializer(serializers.Serializer):
     ticket_ids = serializers.ListField(child=serializers.IntegerField())
 
 
+class PayTicketResponseSerializer(serializers.Serializer):
+    message = serializers.CharField() 
+
+
 class PayTicketRequestSerializer(serializers.Serializer):
     name = serializers.CharField()
     phone = serializers.CharField()
@@ -109,6 +119,3 @@ class PayTicketRequestSerializer(serializers.Serializer):
 
 class PayTicketResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
-
-
-

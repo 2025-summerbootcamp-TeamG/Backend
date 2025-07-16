@@ -127,5 +127,3 @@ class FaceDeleteSuccessSerializer(serializers.Serializer):
 class FaceDeleteErrorSerializer(serializers.Serializer):
     message = serializers.CharField()
     error = serializers.CharField()
-
-

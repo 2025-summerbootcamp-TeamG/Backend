@@ -18,12 +18,96 @@ import os
 import requests
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiTypes, OpenApiExample
 from django.http import JsonResponse
 import qrcode
 from io import BytesIO
 
 
 class FaceRegisterAPIView(APIView):
+    @extend_schema(
+        summary="티켓 얼굴 등록 상태 변경",
+        description="티켓에 얼굴 등록 여부(face_verified)와 user_id를 받아 상태를 변경합니다.",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'face_verified': {'type': 'boolean', 'description': '얼굴 등록 여부'},
+                    'user_id': {'type': 'integer', 'description': '유저 ID'}
+                },
+                'required': ['face_verified', 'user_id']
+            }
+        },
+        parameters=[
+            OpenApiParameter(name='ticket_id', description='티켓 ID', required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "Success",
+                        value={
+                            "code": 200,
+                            "message": "얼굴 등록 상태가 정상적으로 업데이트 되었습니다",
+                            "data": {
+                                "ticket_id": 1,
+                                "user_id": 2,
+                                "face_verified": True,
+                                "verified_at": "2024-07-16 12:00:00"
+                            }
+                        },
+                        status_codes=["200"]
+                    )
+                ]
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="입력값 오류",
+                examples=[
+                    OpenApiExample(
+                        "BadRequest",
+                        value={"message": "face_verified와 user_id가 필요합니다", "data": None},
+                        status_codes=["400"]
+                    )
+                ]
+            ),
+            403: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="권한 없음",
+                examples=[
+                    OpenApiExample(
+                        "Forbidden",
+                        value={"message": "해당 사용자의 티켓 권한 없음", "data": None},
+                        status_codes=["403"]
+                    )
+                ]
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="티켓 없음",
+                examples=[
+                    OpenApiExample(
+                        "NotFound",
+                        value={"message": "티켓 없음", "data": None},
+                        status_codes=["404"]
+                    )
+                ]
+            ),
+            500: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="서버 오류",
+                examples=[
+                    OpenApiExample(
+                        "ServerError",
+                        value={"message": "내부 서버 오류", "result": None},
+                        status_codes=["500"]
+                    )
+                ]
+            ),
+        }
+    )
     def patch(self, request, ticket_id):
         try:
             ticket = Ticket.objects.get(id=ticket_id)
@@ -95,6 +179,63 @@ class FaceRegisterAPIView(APIView):
 
 
 class TicketFaceVerifyView(APIView):
+    @extend_schema(
+        summary="티켓 얼굴 인증",
+        description="AWS Rekognition 결과(face_matches, user_id)로 티켓 얼굴 인증 처리.",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'face_matches': {'type': 'integer', 'description': '얼굴 유사도(%)'},
+                    'user_id': {'type': 'integer', 'description': '유저 ID'}
+                },
+                'required': ['face_matches', 'user_id']
+            }
+        },
+        parameters=[
+            OpenApiParameter(name='pk', description='티켓 PK', required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "Success",
+                        value={"message": "얼굴 인증 성공", "face_verified": True, "verified_at": "2024-07-16 12:00:00"},
+                        status_codes=["200"]
+                    ),
+                    OpenApiExample(
+                        "Fail",
+                        value={"message": "얼굴 인증 실패", "face_verified": False},
+                        status_codes=["200"]
+                    )
+                ]
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="입력값 오류",
+                examples=[
+                    OpenApiExample(
+                        "BadRequest",
+                        value={"error": "face_matches와 user_id가 필요합니다."},
+                        status_codes=["400"]
+                    )
+                ]
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="티켓 없음",
+                examples=[
+                    OpenApiExample(
+                        "NotFound",
+                        value={"error": "티켓을 찾을 수 없습니다."},
+                        status_codes=["404"]
+                    )
+                ]
+            ),
+        }
+    )
     def patch(self, request, pk):
         # AWS Rekognition 결과에서 Face Matches와 User ID 추출
         face_matches = request.data.get('face_matches')  # 예: 95
@@ -125,6 +266,57 @@ class TicketFaceVerifyView(APIView):
 
 
 class TicketFaceAuthAPIView(APIView):
+    @extend_schema(
+        summary="티켓 얼굴 등록 상태 조회",
+        description="티켓의 얼굴 등록 상태, 인증 여부, 인증 시각 등을 조회합니다.",
+        parameters=[
+            OpenApiParameter(name='ticket_id', description='티켓 ID', required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "Success",
+                        value={
+                            "code": 200,
+                            "message": "얼굴 등록 상태 열람 성공",
+                            "data": {
+                                "ticket_id": 1,
+                                "user_id": 2,
+                                "face_verified": True,
+                                "verified_at": "2024-07-16 12:00:00"
+                            }
+                        },
+                        status_codes=["200"]
+                    )
+                ]
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="티켓 없음",
+                examples=[
+                    OpenApiExample(
+                        "NotFound",
+                        value={"code": 404, "message": "티켓 없음.", "data": None},
+                        status_codes=["404"]
+                    )
+                ]
+            ),
+            500: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="서버 오류",
+                examples=[
+                    OpenApiExample(
+                        "ServerError",
+                        value={"message": "내부 서버 오류", "result": None},
+                        status_codes=["500"]
+                    )
+                ]
+            ),
+        }
+    )
     def get(self, request, ticket_id):
         try:
             try:
@@ -177,6 +369,11 @@ class MyTicketListView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="나의 티켓 목록 조회",
+        description="JWT 인증된 유저의 모든 티켓 목록을 반환합니다.",
+        responses=TicketSerializer(many=True)
+    )
     def get(self, request):
         user_id = request.user.id
         tickets = Ticket.objects.filter(user_id=user_id)
@@ -188,6 +385,37 @@ class TicketDetailView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="티켓 상세정보 조회",
+        description="JWT 인증된 유저의 특정 티켓 상세정보를 반환합니다.",
+        parameters=[
+            OpenApiParameter(name='ticket_id', description='티켓 ID', required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "Success",
+                        value={"id": 1, "user_id": 2, "ticket_status": "booked", "seat": 10, "purchase": 5, "face_verified": True, "verified_at": "2024-07-16 12:00:00", "created_at": "2024-07-16T12:00:00Z", "updated_at": "2024-07-16T12:00:00Z", "is_deleted": False},
+                        status_codes=["200"]
+                    )
+                ]
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="티켓 없음",
+                examples=[
+                    OpenApiExample(
+                        "NotFound",
+                        value={"detail": "Not found."},
+                        status_codes=["404"]
+                    )
+                ]
+            ),
+        }
+    )
     def get(self, request, ticket_id):
         ticket = get_object_or_404(Ticket, id=ticket_id, user_id=request.user.id)
         serializer = TicketSerializer(ticket)
@@ -198,6 +426,37 @@ class TicketCancelView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="티켓 취소",
+        description="JWT 인증된 유저의 특정 티켓을 취소 처리합니다.",
+        parameters=[
+            OpenApiParameter(name='ticket_id', description='티켓 ID', required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "Success",
+                        value={"id": 1, "user_id": 2, "ticket_status": "canceled", "seat": 10, "purchase": 5, "face_verified": True, "verified_at": "2024-07-16 12:00:00", "created_at": "2024-07-16T12:00:00Z", "updated_at": "2024-07-16T12:00:00Z", "is_deleted": False},
+                        status_codes=["200"]
+                    )
+                ]
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="티켓 없음",
+                examples=[
+                    OpenApiExample(
+                        "NotFound",
+                        value={"detail": "Not found."},
+                        status_codes=["404"]
+                    )
+                ]
+            ),
+        }
+    )
     def patch(self, request, ticket_id):
         ticket = get_object_or_404(Ticket, id=ticket_id, user_id=request.user.id)
         ticket.ticket_status = 'canceled'
@@ -216,6 +475,60 @@ class ShareTicketsView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="티켓 공유",
+        description="구매(purchase_id)한 티켓 중 일부를 이메일로 지정한 유저에게 공유합니다. 본인 소유 티켓은 첫 번째로 유지됩니다.",
+        parameters=[
+            OpenApiParameter(name='purchase_id', description='구매 ID', required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'ticket_user_emails': {
+                        'type': 'array',
+                        'items': {'type': 'string', 'format': 'email'},
+                        'description': '양도할 유저 이메일 리스트'
+                    }
+                },
+                'required': ['ticket_user_emails']
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "Success",
+                        value={"message": "Tickets shared successfully"},
+                        status_codes=["200"]
+                    )
+                ]
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="입력값 오류/이메일 불일치/티켓 수 불일치 등",
+                examples=[
+                    OpenApiExample(
+                        "BadRequest",
+                        value={"error": "ticket_user_emails는 리스트 형태여야 합니다."},
+                        status_codes=["400"]
+                    ),
+                    OpenApiExample(
+                        "EmailNotFound",
+                        value={"error": "일부 이메일이 존재하지 않습니다."},
+                        status_codes=["400"]
+                    ),
+                    OpenApiExample(
+                        "TicketCountMismatch",
+                        value={"error": "공유 티켓 수가 맞지 않음", "details": {"current_tickets_count": 2, "shared_users_count": 1, "required_tickets": 2, "purchase_id": 1, "user_id": 2}},
+                        status_codes=["400"]
+                    )
+                ]
+            ),
+        }
+    )
     def post(self, request, purchase_id):
         data = request.data
         user = request.user
@@ -269,6 +582,99 @@ class ShareTicketsView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class AWSFaceRecognitionView(APIView):
+    @extend_schema(
+        summary="AWS Rekognition 얼굴 등록/인증",
+        description="action이 'register'면 얼굴 등록, 'verify'면 얼굴 인증을 수행합니다. (Base64 인코딩 이미지 필요)",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'action': {'type': 'string', 'enum': ['register', 'verify'], 'description': "'register' 또는 'verify'"},
+                    'user_id': {'type': 'integer', 'description': '유저 ID'},
+                    'ticket_id': {'type': 'integer', 'description': '티켓 ID'},
+                    'image': {'type': 'string', 'description': 'Base64 인코딩 이미지'}
+                },
+                'required': ['action', 'user_id', 'ticket_id', 'image']
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "RegisterSuccess",
+                        value={
+                            "code": 200,
+                            "message": "얼굴 등록 상태가 정상적으로 업데이트 되었습니다",
+                            "data": {
+                                "ticket_id": 1,
+                                "user_id": 2,
+                                "face_verified": True,
+                                "verified_at": "2024-07-16 12:00:00",
+                                "external_image_id": "user_2_ticket_1"
+                            }
+                        },
+                        status_codes=["200"]
+                    ),
+                    OpenApiExample(
+                        "VerifySuccess",
+                        value={
+                            "message": "얼굴 인증 성공",
+                            "similarity": 99.5,
+                            "face_id": "faceid123",
+                            "external_image_id": "user_2_ticket_1",
+                            "face_matches": [
+                                {"similarity": 99.5, "face_id": "faceid123", "external_image_id": "user_2_ticket_1"}
+                            ]
+                        },
+                        status_codes=["200"]
+                    ),
+                    OpenApiExample(
+                        "VerifyFail",
+                        value={
+                            "message": "얼굴 인증 실패: 해당 티켓에 등록된 얼굴과 일치하지 않습니다.",
+                            "face_matches": []
+                        },
+                        status_codes=["400"]
+                    ),
+                ]
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="입력값 오류/얼굴 미감지 등",
+                examples=[
+                    OpenApiExample(
+                        "BadRequest",
+                        value={"message": "얼굴이 감지되지 않았습니다."},
+                        status_codes=["400"]
+                    )
+                ]
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="티켓 없음",
+                examples=[
+                    OpenApiExample(
+                        "NotFound",
+                        value={"message": "티켓 없음", "data": None},
+                        status_codes=["404"]
+                    )
+                ]
+            ),
+            500: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="서버 오류",
+                examples=[
+                    OpenApiExample(
+                        "ServerError",
+                        value={"message": "처리 중 오류 발생", "error": "에러 메시지"},
+                        status_codes=["500"]
+                    )
+                ]
+            ),
+        }
+    )
     def post(self, request):
         try:
             action = request.data.get('action')
@@ -391,6 +797,39 @@ class AWSFaceRecognitionView(APIView):
 
 # 등록된 얼굴 목록 반환 API
 class FaceListAPIView(APIView):
+    @extend_schema(
+        summary="등록된 얼굴 목록 조회",
+        description="AWS Rekognition Collection에 등록된 얼굴 목록을 반환합니다.",
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "Success",
+                        value={
+                            "data": [
+                                {"FaceId": "faceid123", "ExternalImageId": "user_2_ticket_1"},
+                                {"FaceId": "faceid456", "ExternalImageId": "user_3_ticket_2"}
+                            ]
+                        },
+                        status_codes=["200"]
+                    )
+                ]
+            ),
+            500: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="서버 오류",
+                examples=[
+                    OpenApiExample(
+                        "ServerError",
+                        value={"message": "목록 불러오기 실패", "error": "에러 메시지"},
+                        status_codes=["500"]
+                    )
+                ]
+            ),
+        }
+    )
     def get(self, request):
         try:
             rekognition = boto3.client(
@@ -422,6 +861,54 @@ class FaceListAPIView(APIView):
 
 # 얼굴 삭제 API
 class FaceDeleteAPIView(APIView):
+    @extend_schema(
+        summary="등록된 얼굴 삭제",
+        description="AWS Rekognition Collection에서 FaceId로 얼굴을 삭제합니다.",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'face_id': {'type': 'string', 'description': '삭제할 FaceId'}
+                },
+                'required': ['face_id']
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "Success",
+                        value={"message": "삭제 성공"},
+                        status_codes=["200"]
+                    )
+                ]
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="face_id 누락 등 입력값 오류",
+                examples=[
+                    OpenApiExample(
+                        "BadRequest",
+                        value={"message": "face_id가 필요합니다."},
+                        status_codes=["400"]
+                    )
+                ]
+            ),
+            500: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="서버 오류",
+                examples=[
+                    OpenApiExample(
+                        "ServerError",
+                        value={"message": "삭제 실패", "error": "에러 메시지"},
+                        status_codes=["500"]
+                    )
+                ]
+            ),
+        }
+    )
     def post(self, request):
         face_id = request.data.get('face_id')
         if not face_id:
