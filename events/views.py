@@ -67,7 +67,7 @@ class BuyTicketsView(APIView):
     )
     def post(self, request, event_id):
         data = request.data
-        user = request.user  # ✅ JWT에서 인증된 유저
+        user = request.user  # JWT에서 인증된 유저
         seat_ids = data.get('seat_id', [])
         event_time_id = data.get('event_time_id')
 

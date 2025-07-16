@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Event, EventTime, Zone
 
+
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
@@ -16,9 +17,11 @@ class ZoneSerializer(serializers.ModelSerializer):
         model = Zone
         fields = '__all__'
 
+
 class EventListSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='pk')
-    title = serializers.CharField(source='artist')
+    title = serializers.CharField(source='name')           # 타이틀은 행사명!
+    artist = serializers.CharField()                       # 출연진 정보
     location = serializers.CharField()
     date = serializers.SerializerMethodField()
     thumbnail = serializers.CharField(source='image_url')
@@ -29,7 +32,7 @@ class EventListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = [
-            'id', 'title', 'location', 'date', 'thumbnail', 'price', 'status', 'tag'
+            'id', 'title', 'artist', 'location', 'date', 'thumbnail', 'price', 'status', 'tag'
         ]
 
     def get_date(self, obj):
@@ -53,6 +56,12 @@ class EventListResponseSerializer(serializers.Serializer):
     events = EventListSerializer(many=True)
     message = serializers.CharField(required=False)
 
+
+class EventScheduleSerializer(serializers.Serializer):
+    date = serializers.CharField()
+    start_time = serializers.CharField()
+    end_time = serializers.CharField()
+    
 class EventDetailResponseSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     title = serializers.CharField()
@@ -65,6 +74,10 @@ class EventDetailResponseSerializer(serializers.Serializer):
     schedules = serializers.ListField(child=serializers.DictField())
 
 class EventSeatsDataSerializer(serializers.Serializer):
+    schedules = EventScheduleSerializer(many=True)
+
+
+class SeatInfoSerializer(serializers.Serializer):
     seat_id = serializers.IntegerField()
     seat_number = serializers.CharField()
     price = serializers.IntegerField()
@@ -75,12 +88,34 @@ class EventSeatsDataSerializer(serializers.Serializer):
 class EventSeatsResponseSerializer(serializers.Serializer):
     statusCode = serializers.IntegerField()
     message = serializers.CharField()
+
     data = serializers.ListField(child=EventSeatsDataSerializer())
+
+    data = SeatInfoSerializer(many=True, allow_null=True)
+
+
+class BuyTicketsRequestSerializer(serializers.Serializer):
+    seat_id = serializers.ListField(
+        child=serializers.IntegerField(),
+        allow_empty=False,
+        help_text="선택한 좌석 ID 리스트"
+    )
+    event_time_id = serializers.IntegerField(help_text="예매하려는 공연 시간 ID")
 
 class BuyTicketsResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
     purchase_id = serializers.IntegerField()
     ticket_ids = serializers.ListField(child=serializers.IntegerField())
 
+
 class PayTicketResponseSerializer(serializers.Serializer):
     message = serializers.CharField() 
+
+
+class PayTicketRequestSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    phone = serializers.CharField()
+    email = serializers.CharField()
+
+class PayTicketResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
