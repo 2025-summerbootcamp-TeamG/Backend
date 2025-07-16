@@ -4,6 +4,7 @@ from django.db import models
 
 
 class Event(models.Model):
+    name = models.CharField(max_length=50)
     artist = models.CharField(max_length=100)
     location = models.CharField(max_length=100)
     description = models.TextField()
@@ -17,7 +18,7 @@ class Event(models.Model):
     view_count = models.IntegerField(default=0)
 
     class Meta:
-        db_table = 'event'  # 테이블 이름을 'user'로 지정
+        db_table = 'event'  
 
 
 class EventTime(models.Model):
@@ -30,7 +31,7 @@ class EventTime(models.Model):
     is_deleted = models.BooleanField(default=False)
 
     class Meta:
-        db_table = 'event_time'  # 테이블 이름을 'user'로 지정
+        db_table = 'event_time'  
 
 
 class Zone(models.Model):
@@ -44,7 +45,7 @@ class Zone(models.Model):
     available_count = models.IntegerField()
 
     class Meta:
-        db_table = 'zone'  # 테이블 이름을 'user'로 지정
+        db_table = 'zone'  
 
 
 class Seat(models.Model):
@@ -56,4 +57,4 @@ class Seat(models.Model):
     is_deleted = models.BooleanField(default=False)
 
     class Meta:
-        db_table = 'seat'  # 테이블 이름을 'user'로 지정
+        db_table = 'seat'  
