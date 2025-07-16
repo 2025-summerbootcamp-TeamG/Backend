@@ -24,10 +24,199 @@ import qrcode
 from io import BytesIO
 
 
-class FaceRegisterAPIView(APIView):
+###############################################
+# 얼굴 관련 API 모음 (등록/인증/상태조회/DB/AWS)
+###############################################
+
+# --- 1. AWS Rekognition 얼굴 등록 ---
+# [POST] /api/v1/tickets/<ticket_id>/aws-register/
+# - JWT 토큰 인증 필요
+# - base64 이미지(image) 전달
+# - AWS Rekognition에 user_{user_id}_ticket_{ticket_id}로 등록
+# - 성공 시 FaceId, ExternalImageId 반환
+class AWSFaceRecognitionRegister(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     @extend_schema(
-        summary="티켓 얼굴 등록 상태 변경",
-        description="티켓에 얼굴 등록 여부(face_verified)만 받아 상태를 변경합니다. user_id는 토큰(JWT) 인증에서 추출합니다.",
+        summary="AWS Rekognition 얼굴 등록",
+        description="AWS Rekognition에 얼굴을 등록합니다. ExternalImageId는 user_{user_id}_ticket_{ticket_id}로 지정.",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'image': {'type': 'string', 'description': 'base64 인코딩 얼굴 이미지'},
+                },
+                'required': ['image']
+            }
+        },
+        parameters=[
+            OpenApiParameter(name='ticket_id', description='티켓 ID', required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "Success",
+                        value={"message": "얼굴 등록 성공", "FaceId": "...", "ExternalImageId": "user_1_ticket_2"},
+                        status_codes=["200"]
+                    )
+                ]
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="입력값 오류",
+                examples=[
+                    OpenApiExample(
+                        "BadRequest",
+                        value={"message": "image가 필요합니다."},
+                        status_codes=["400"]
+                    )
+                ]
+            ),
+        }
+    )
+    def post(self, request, ticket_id):
+        image_base64 = request.data.get('image')
+        if not image_base64:
+            return Response({"message": "image가 필요합니다."}, status=400)
+        try:
+            import base64, os, boto3
+            image_bytes = base64.b64decode(image_base64)
+            user_id = request.user.id
+            external_image_id = f"user_{user_id}_ticket_{ticket_id}"
+            rekognition = boto3.client(
+                'rekognition',
+                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+                region_name='ap-northeast-2'
+            )
+            collection_id = 'my-tickets'
+            response = rekognition.index_faces(
+                CollectionId=collection_id,
+                Image={'Bytes': image_bytes},
+                ExternalImageId=external_image_id,
+                DetectionAttributes=['DEFAULT']
+            )
+            faces = response.get('FaceRecords', [])
+            if faces:
+                return Response({
+                    "message": "얼굴 등록 성공",
+                    "FaceId": faces[0]['Face']['FaceId'],
+                    "ExternalImageId": faces[0]['Face']['ExternalImageId']
+                }, status=200)
+            else:
+                return Response({"message": "얼굴 등록 실패", "response": response}, status=400)
+        except Exception as e:
+            return Response({"message": "AWS Rekognition 처리 중 오류", "error": str(e)}, status=500)
+
+# --- 2. AWS Rekognition 얼굴 인증 ---
+# [POST] /api/v1/tickets/<ticket_id>/aws-auth/
+# - JWT 토큰 인증 필요
+# - base64 이미지(image) 전달
+# - AWS Rekognition에서 user_{user_id}_ticket_{ticket_id}로 등록된 얼굴과만 비교
+# - 성공 시 FaceId, ExternalImageId, Similarity 반환
+class AWSFaceRecognitionAuth(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="AWS Rekognition 얼굴 인증",
+        description="AWS Rekognition에서 user_{user_id}_ticket_{ticket_id}로 등록된 얼굴과만 비교하여 인증합니다.",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'image': {'type': 'string', 'description': 'base64 인코딩 얼굴 이미지'},
+                },
+                'required': ['image']
+            }
+        },
+        parameters=[
+            OpenApiParameter(name='ticket_id', description='티켓 ID', required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "Success",
+                        value={"message": "얼굴 인증 성공", "FaceId": "...", "ExternalImageId": "user_1_ticket_2", "Similarity": 99.9},
+                        status_codes=["200"]
+                    ),
+                    OpenApiExample(
+                        "Fail",
+                        value={"message": "얼굴 인증 실패", "Similarity": 0},
+                        status_codes=["200"]
+                    )
+                ]
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="입력값 오류",
+                examples=[
+                    OpenApiExample(
+                        "BadRequest",
+                        value={"message": "image가 필요합니다."},
+                        status_codes=["400"]
+                    )
+                ]
+            ),
+        }
+    )
+    def post(self, request, ticket_id):
+        image_base64 = request.data.get('image')
+        if not image_base64:
+            return Response({"message": "image가 필요합니다."}, status=400)
+        try:
+            import base64, os, boto3
+            image_bytes = base64.b64decode(image_base64)
+            user_id = request.user.id
+            external_image_id = f"user_{user_id}_ticket_{ticket_id}"
+            rekognition = boto3.client(
+                'rekognition',
+                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+                region_name='ap-northeast-2'
+            )
+            collection_id = 'my-tickets'
+            response = rekognition.search_faces_by_image(
+                CollectionId=collection_id,
+                Image={'Bytes': image_bytes},
+                MaxFaces=5,
+                FaceMatchThreshold=95
+            )
+            face_matches = response.get('FaceMatches', [])
+            # ExternalImageId가 정확히 일치하는 것만 필터링
+            filtered = [f for f in face_matches if f['Face'].get('ExternalImageId') == external_image_id]
+            if filtered:
+                best = max(filtered, key=lambda f: f['Similarity'])
+                return Response({
+                    "message": "얼굴 인증 성공",
+                    "FaceId": best['Face']['FaceId'],
+                    "ExternalImageId": best['Face']['ExternalImageId'],
+                    "Similarity": best['Similarity']
+                }, status=200)
+            else:
+                return Response({"message": "얼굴 인증 실패", "Similarity": 0}, status=200)
+        except Exception as e:
+            return Response({"message": "AWS Rekognition 처리 중 오류", "error": str(e)}, status=500)
+
+# --- 3. DB 기반 얼굴 등록 상태 변경 ---
+# [PATCH] /api/v1/tickets/<ticket_id>/register/
+# - JWT 토큰 인증 필요
+# - face_verified(boolean)만 입력
+# - DB의 ticket 테이블에 face_verified, verified_at만 저장
+class FaceRegisterAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="티켓 얼굴 등록 상태 변경 (DB 필드만)",
+        description="티켓의 face_verified, verified_at 필드만 DB에 저장합니다. AWS 등 외부 연동 없음.",
         request={
             'application/json': {
                 'type': 'object',
@@ -43,7 +232,7 @@ class FaceRegisterAPIView(APIView):
         responses={
             200: OpenApiResponse(
                 response=OpenApiTypes.OBJECT,
-                description="성공",
+                description="성공: DB에 face_verified, verified_at 저장",
                 examples=[
                     OpenApiExample(
                         "Success",
@@ -63,7 +252,7 @@ class FaceRegisterAPIView(APIView):
             ),
             400: OpenApiResponse(
                 response=OpenApiTypes.OBJECT,
-                description="입력값 오류",
+                description="입력값 오류 (face_verified 없음)",
                 examples=[
                     OpenApiExample(
                         "BadRequest",
@@ -74,7 +263,7 @@ class FaceRegisterAPIView(APIView):
             ),
             403: OpenApiResponse(
                 response=OpenApiTypes.OBJECT,
-                description="권한 없음",
+                description="권한 없음 (본인 티켓 아님)",
                 examples=[
                     OpenApiExample(
                         "Forbidden",
@@ -100,7 +289,7 @@ class FaceRegisterAPIView(APIView):
                 examples=[
                     OpenApiExample(
                         "ServerError",
-                        value={"message": "내부 서버 오류", "result": None},
+                        value={"message": "내부 서버 오류", "error": "에러 메시지"},
                         status_codes=["500"]
                     )
                 ]
@@ -112,44 +301,27 @@ class FaceRegisterAPIView(APIView):
             ticket = Ticket.objects.get(id=ticket_id)
         except Ticket.DoesNotExist:
             return Response(
-                {
-                    "message": "티켓 없음",
-                    "data": None
-                },
-                status=status.HTTP_404_NOT_FOUND,
-                content_type="application/json; charset=UTF-8"
+                {"message": "티켓 없음", "data": None},
+                status=status.HTTP_404_NOT_FOUND
             )
-
+        if ticket.user_id != request.user.id:
+            return Response(
+                {"message": "해당 사용자의 티켓 권한 없음", "data": None},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        face_verified = request.data.get('face_verified')
+        if face_verified is None:
+            return Response(
+                {"message": "face_verified가 필요합니다", "data": None},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if isinstance(face_verified, str):
+            face_verified = face_verified.lower() == 'true'
         try:
-            face_verified = request.data.get('face_verified')
-            if face_verified is None:
-                return Response(
-                    {
-                        "message": "face_verified가 필요합니다",
-                        "data": None
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                    content_type="application/json; charset=UTF-8"
-                )
-
-            # 티켓의 user_id와 로그인 유저 비교
-            if ticket.user_id != request.user.id:
-                return Response(
-                    {
-                        "message": "해당 사용자의 티켓 권한 없음",
-                        "data": None
-                    },
-                    status=status.HTTP_403_FORBIDDEN,
-                    content_type="application/json; charset=UTF-8"
-                )
-
             ticket.face_verified = face_verified
-            ticket.verified_at = timezone.now()
+            ticket.verified_at = timezone.now() if face_verified else None
             ticket.save()
-
-            verified_at_local = timezone.localtime(ticket.verified_at)
-            verified_at_str = verified_at_local.strftime('%Y-%m-%d %H:%M:%S')
-
+            verified_at_str = timezone.localtime(ticket.verified_at).strftime('%Y-%m-%d %H:%M:%S') if ticket.verified_at else None
             return Response(
                 {
                     "code": 200,
@@ -161,118 +333,32 @@ class FaceRegisterAPIView(APIView):
                         "verified_at": verified_at_str
                     }
                 },
-                status=status.HTTP_200_OK,
-                content_type="application/json; charset=UTF-8"
+                status=status.HTTP_200_OK
             )
-        except Exception:
+        except Exception as e:
             return Response(
-                {
-                    "message": "내부 서버 오류",
-                    "result": None
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content_type="application/json; charset=UTF-8"
+                {"message": "내부 서버 오류", "error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
-class TicketFaceVerifyView(APIView):
-    @extend_schema(
-        summary="티켓 얼굴 인증",
-        description="AWS Rekognition 결과(face_matches)로 티켓 얼굴 인증 처리. user_id는 토큰(JWT) 인증에서 추출합니다.",
-        request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'face_matches': {'type': 'integer', 'description': '얼굴 유사도(%)'},
-                },
-                'required': ['face_matches']
-            }
-        },
-        parameters=[
-            OpenApiParameter(name='pk', description='티켓 PK', required=True, type=int, location=OpenApiParameter.PATH),
-        ],
-        responses={
-            200: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description="성공",
-                examples=[
-                    OpenApiExample(
-                        "Success",
-                        value={"message": "얼굴 인증 성공", "face_verified": True, "verified_at": "2024-07-16 12:00:00"},
-                        status_codes=["200"]
-                    ),
-                    OpenApiExample(
-                        "Fail",
-                        value={"message": "얼굴 인증 실패", "face_verified": False},
-                        status_codes=["200"]
-                    )
-                ]
-            ),
-            400: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description="입력값 오류",
-                examples=[
-                    OpenApiExample(
-                        "BadRequest",
-                        value={"error": "face_matches가 필요합니다."},
-                        status_codes=["400"]
-                    )
-                ]
-            ),
-            404: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description="티켓 없음",
-                examples=[
-                    OpenApiExample(
-                        "NotFound",
-                        value={"error": "티켓을 찾을 수 없습니다."},
-                        status_codes=["404"]
-                    )
-                ]
-            ),
-        }
-    )
-    def patch(self, request, pk):
-        face_matches = request.data.get('face_matches')  # 예: 95
-        if face_matches is None:
-            return Response({'error': 'face_matches가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            ticket = Ticket.objects.get(pk=pk)
-        except Ticket.DoesNotExist:
-            return Response({'error': '티켓을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
-
-        # 티켓의 user_id와 로그인 유저 비교
-        if ticket.user_id != request.user.id:
-            return Response({'error': '해당 사용자의 티켓 권한 없음.'}, status=status.HTTP_403_FORBIDDEN)
-
-        if face_matches >= 95:
-            ticket.face_verified = True
-            ticket.verified_at = timezone.now()
-            ticket.save()
-            return Response({
-                'message': '얼굴 인증 성공', 
-                'face_verified': True, 
-                'verified_at': ticket.verified_at
-            }, status=status.HTTP_200_OK)
-        else:
-            return Response({
-                'message': '얼굴 인증 실패', 
-                'face_verified': False
-            }, status=status.HTTP_200_OK)
-
-
+# --- 4. DB 기반 얼굴 등록 상태 조회 ---
+# [GET] /api/v1/tickets/<ticket_id>/auth/
+# - JWT 토큰 인증 필요
+# - DB의 ticket 테이블에서 face_verified, verified_at만 조회
 class TicketFaceAuthAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     @extend_schema(
-        summary="티켓 얼굴 등록 상태 조회",
-        description="티켓의 얼굴 등록 상태, 인증 여부, 인증 시각 등을 조회합니다.",
+        summary="티켓 얼굴 등록 상태 조회 (DB 필드만)",
+        description="티켓의 face_verified, verified_at 필드만 DB에서 조회합니다. AWS 등 외부 연동 없음.",
         parameters=[
             OpenApiParameter(name='ticket_id', description='티켓 ID', required=True, type=int, location=OpenApiParameter.PATH),
         ],
         responses={
             200: OpenApiResponse(
                 response=OpenApiTypes.OBJECT,
-                description="성공",
+                description="성공: DB에서 face_verified, verified_at 조회",
                 examples=[
                     OpenApiExample(
                         "Success",
@@ -301,13 +387,24 @@ class TicketFaceAuthAPIView(APIView):
                     )
                 ]
             ),
+            403: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="권한 없음 (본인 티켓 아님)",
+                examples=[
+                    OpenApiExample(
+                        "Forbidden",
+                        value={"message": "해당 사용자의 티켓 권한 없음", "data": None},
+                        status_codes=["403"]
+                    )
+                ]
+            ),
             500: OpenApiResponse(
                 response=OpenApiTypes.OBJECT,
                 description="서버 오류",
                 examples=[
                     OpenApiExample(
                         "ServerError",
-                        value={"message": "내부 서버 오류", "result": None},
+                        value={"message": "내부 서버 오류", "error": "에러 메시지"},
                         status_codes=["500"]
                     )
                 ]
@@ -316,27 +413,20 @@ class TicketFaceAuthAPIView(APIView):
     )
     def get(self, request, ticket_id):
         try:
-            try:
-                ticket = Ticket.objects.get(id=ticket_id)
-            except Ticket.DoesNotExist:
-                return Response(
-                    {
-                        "code": 404,
-                        "message": "티켓 없음.",
-                        "data": None
-                    },
-                    status=status.HTTP_404_NOT_FOUND,
-                    content_type="application/json; charset=UTF-8"
-                )
-
-            # 서울 시간대로 변환 (pytz 없이)
+            ticket = Ticket.objects.get(id=ticket_id)
+        except Ticket.DoesNotExist:
+            return Response(
+                {"code": 404, "message": "티켓 없음.", "data": None},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        if ticket.user_id != request.user.id:
+            return Response(
+                {"message": "해당 사용자의 티켓 권한 없음", "data": None},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        try:
             verified_at = ticket.verified_at
-            if verified_at:
-                verified_at_local = timezone.localtime(verified_at)
-                verified_at_str = verified_at_local.strftime('%Y-%m-%d %H:%M:%S')
-            else:
-                verified_at_str = None
-
+            verified_at_str = timezone.localtime(verified_at).strftime('%Y-%m-%d %H:%M:%S') if verified_at else None
             return Response(
                 {
                     "code": 200,
@@ -348,17 +438,12 @@ class TicketFaceAuthAPIView(APIView):
                         "verified_at": verified_at_str
                     }
                 },
-                status=status.HTTP_200_OK,
-                content_type="application/json; charset=UTF-8"
+                status=status.HTTP_200_OK
             )
-        except Exception:
+        except Exception as e:
             return Response(
-                {
-                    "message": "내부 서버 오류",
-                    "result": None
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content_type="application/json; charset=UTF-8"
+                {"message": "내부 서버 오류", "error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
             # 나의 티켓 전체 조회
@@ -577,222 +662,6 @@ class ShareTicketsView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-class AWSFaceRecognitionView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        summary="AWS Rekognition 얼굴 등록/인증",
-        description="action이 'register'면 얼굴 등록, 'verify'면 얼굴 인증을 수행합니다. (Base64 인코딩 이미지 필요) user_id는 토큰(JWT) 인증에서 추출합니다.",
-        request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'action': {'type': 'string', 'enum': ['register', 'verify'], 'description': "'register' 또는 'verify'"},
-                    'ticket_id': {'type': 'integer', 'description': '티켓 ID'},
-                    'image': {'type': 'string', 'description': 'Base64 인코딩 이미지'}
-                },
-                'required': ['action', 'ticket_id', 'image']
-            }
-        },
-        responses={
-            200: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description="성공",
-                examples=[
-                    OpenApiExample(
-                        "RegisterSuccess",
-                        value={
-                            "code": 200,
-                            "message": "얼굴 등록 상태가 정상적으로 업데이트 되었습니다",
-                            "data": {
-                                "ticket_id": 1,
-                                "user_id": 2,
-                                "face_verified": True,
-                                "verified_at": "2024-07-16 12:00:00",
-                                "external_image_id": "user_2_ticket_1"
-                            }
-                        },
-                        status_codes=["200"]
-                    ),
-                    OpenApiExample(
-                        "VerifySuccess",
-                        value={
-                            "message": "얼굴 인증 성공",
-                            "similarity": 99.5,
-                            "face_id": "faceid123",
-                            "external_image_id": "user_2_ticket_1",
-                            "face_matches": [
-                                {"similarity": 99.5, "face_id": "faceid123", "external_image_id": "user_2_ticket_1"}
-                            ]
-                        },
-                        status_codes=["200"]
-                    ),
-                    OpenApiExample(
-                        "VerifyFail",
-                        value={
-                            "message": "얼굴 인증 실패: 해당 티켓에 등록된 얼굴과 일치하지 않습니다.",
-                            "face_matches": []
-                        },
-                        status_codes=["400"]
-                    ),
-                ]
-            ),
-            400: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description="입력값 오류/얼굴 미감지 등",
-                examples=[
-                    OpenApiExample(
-                        "BadRequest",
-                        value={"message": "얼굴이 감지되지 않았습니다."},
-                        status_codes=["400"]
-                    )
-                ]
-            ),
-            404: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description="티켓 없음",
-                examples=[
-                    OpenApiExample(
-                        "NotFound",
-                        value={"message": "티켓 없음", "data": None},
-                        status_codes=["404"]
-                    )
-                ]
-            ),
-            500: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description="서버 오류",
-                examples=[
-                    OpenApiExample(
-                        "ServerError",
-                        value={"message": "처리 중 오류 발생", "error": "에러 메시지"},
-                        status_codes=["500"]
-                    )
-                ]
-            ),
-        }
-    )
-    def post(self, request):
-        try:
-            action = request.data.get('action')
-            ticket_id = request.data.get('ticket_id')
-            image_data = request.data.get('image')
-            user_id = request.user.id
-
-            rekognition = boto3.client(
-                'rekognition',
-                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
-                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
-                region_name='ap-northeast-2'
-            )
-
-            if action == 'register':
-                # Rekognition Collection에 얼굴 등록
-                image_bytes = base64.b64decode(image_data)
-                collection_id = 'my-tickets'  # 실제 생성한 Collection ID
-
-                external_image_id = f'user_{user_id}_ticket_{ticket_id}'
-                response = rekognition.index_faces(
-                    CollectionId=collection_id,
-                    Image={'Bytes': image_bytes},
-                    ExternalImageId=external_image_id,
-                    DetectionAttributes=['DEFAULT']
-                )
-
-                if response['FaceRecords']:
-                    # 티켓 정보 업데이트
-                    try:
-                        ticket = Ticket.objects.get(id=ticket_id)
-                        ticket.face_verified = True
-                        ticket.verified_at = timezone.now()
-                        ticket.save()
-
-                        verified_at_local = timezone.localtime(ticket.verified_at)
-                        verified_at_str = verified_at_local.strftime('%Y-%m-%d %H:%M:%S')
-
-                        return Response(
-                            {
-                                "code": 200,
-                                "message": "얼굴 등록 상태가 정상적으로 업데이트 되었습니다",
-                                "data": {
-                                    "ticket_id": ticket.id,
-                                    "user_id": ticket.user_id,
-                                    "face_verified": ticket.face_verified,
-                                    "verified_at": verified_at_str,
-                                    "external_image_id": external_image_id
-                                }
-                            },
-                            status=status.HTTP_200_OK,
-                            content_type="application/json; charset=UTF-8"
-                        )
-                    except Ticket.DoesNotExist:
-                        return Response(
-                            {
-                                "message": "티켓 없음",
-                                "data": None
-                            },
-                            status=status.HTTP_404_NOT_FOUND,
-                            content_type="application/json; charset=UTF-8"
-                        )
-                else:
-                    return Response({
-                        'message': '얼굴이 감지되지 않았습니다.'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-
-            elif action == 'verify':
-                # 얼굴 인증
-                image_bytes = base64.b64decode(image_data)
-                collection_id = 'my-tickets'
-
-                response = rekognition.search_faces_by_image(
-                    CollectionId=collection_id,
-                    Image={'Bytes': image_bytes},
-                    MaxFaces=5,  # 여러 개를 받아서 필터링
-                    FaceMatchThreshold=95
-                )
-
-                # 요청값으로 ExternalImageId 생성
-                external_image_id = f'user_{user_id}_ticket_{ticket_id}'
-                # FaceMatches 중 ExternalImageId가 일치하는 것만 필터링
-                matched_face = None
-                for match in response.get('FaceMatches', []):
-                    if match['Face'].get('ExternalImageId') == external_image_id:
-                        matched_face = match
-                        break
-
-                # FaceMatches 전체를 가공해서 응답에 포함
-                face_matches_list = [
-                    {
-                        'similarity': m['Similarity'],
-                        'face_id': m['Face']['FaceId'],
-                        'external_image_id': m['Face'].get('ExternalImageId', '')
-                    } for m in response.get('FaceMatches', [])
-                ]
-
-                if matched_face:
-                    similarity = matched_face['Similarity']
-                    face_id = matched_face['Face']['FaceId']
-                    return Response({
-                        'message': '얼굴 인증 성공',
-                        'similarity': similarity,
-                        'face_id': face_id,
-                        'external_image_id': external_image_id,
-                        'face_matches': face_matches_list
-                    }, status=status.HTTP_200_OK)
-                else:
-                    return Response({
-                        'message': '얼굴 인증 실패: 해당 티켓에 등록된 얼굴과 일치하지 않습니다.',
-                        'face_matches': face_matches_list
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                    
-        except Exception as e:
-            return Response({
-                'message': '처리 중 오류 발생',
-                'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 # 등록된 얼굴 목록 반환 API
 class FaceListAPIView(APIView):
