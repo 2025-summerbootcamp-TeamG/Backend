@@ -4,128 +4,167 @@
     <title>얼굴 등록 시스템</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f4f6fa; }
-        .container { max-width: 420px; min-width: 0; width: 100%; box-sizing: border-box; margin: 32px auto; background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); padding: 22px 24px 18px 24px; }
-        h1 { text-align: center; margin-bottom: 24px; font-size: 1.5em; color: #222; letter-spacing: 1px; }
-        .section { margin-bottom: 28px; }
-        @media (max-width: 600px) {
-            .container { max-width: 98vw; padding: 12px 2vw 10px 2vw; }
-            h1 { font-size: 1.15em; }
-            .section-title { font-size: 1em; }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            max-width: 900px;
+            margin: 24px auto;
         }
-        .section-title { display: flex; align-items: center; font-size: 1.08em; font-weight: 600; color: #2d3a4a; margin-bottom: 10px; gap: 7px; }
-        .section-title .icon { font-size: 1.15em; }
-        .camera { text-align: center; margin-bottom: 10px; }
-        #video { width: 100%; max-width: 320px; min-width: 180px; border-radius: 8px; border: 1.5px solid #e0e0e0; }
-        .btn { padding: 8px 0.9em; min-width: 80px; background: #1976d2; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; transition: background 0.15s; }
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            padding: 18px 16px 14px 16px;
+            margin-bottom: 0;
+        }
+        h2, h3 { text-align: center; margin: 0 0 12px 0; font-size: 1.2em; color: #2563eb; }
+        .section-title { font-size: 1em; font-weight: 600; color: #2d3a4a; margin-bottom: 8px; }
+        .input-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .input-row > * { flex: 1 1 100px; min-width: 0; }
+        input[type="text"], input[type="number"], input[type="password"], input[type="email"] {
+            padding: 7px; border: 1px solid #cfd8dc; border-radius: 4px; width: 100%; font-size: 0.98em; background: #f8fafc;
+        }
+        .btn { padding: 7px 0.9em; min-width: 70px; background: #1976d2; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 0.98em; transition: background 0.15s; }
         .btn:hover { background: #1256a3; }
-        .input-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-        .input-row > * { flex: 1 1 120px; min-width: 0; }
-        input[type="text"], input[type="number"], input[type="password"] {
-            padding: 8px; border: 1px solid #cfd8dc; border-radius: 4px; width: 100%; font-size: 1em; background: #f8fafc;
-            min-width: 0; box-sizing: border-box;
-        }
-        @media (max-width: 480px) {
-            .input-row { flex-direction: column; gap: 6px; }
-            .btn { width: 100%; min-width: 0; }
-        }
-        .result { margin: 16px 0 0 0; padding: 10px; border-radius: 5px; font-size: 0.97em; }
+        .result { margin: 10px 0 0 0; padding: 7px; border-radius: 5px; font-size: 0.97em; }
         .success { background: #e3f6e8; color: #256029; }
         .error { background: #ffeaea; color: #b71c1c; }
-        ul#face-list { padding-left: 18px; margin-top: 8px; }
-        ul#face-list li { margin-bottom: 6px; font-size: 0.96em; }
-        .token-box { background: #f1f1f1; padding: 7px; border-radius: 4px; word-break: break-all; margin-top: 6px; }
-        .sub-label { font-size: 0.96em; color: #6a7a8c; margin-bottom: 4px; display: block; }
+        .token-box { background: #f1f1f1; padding: 6px; border-radius: 4px; word-break: break-all; margin-top: 6px; font-size: 0.95em; }
+        ul#aws_face_list { padding-left: 16px; margin-top: 6px; font-size: 0.96em; }
         .center { text-align: center; }
+        .camera-box { text-align: center; margin-bottom: 0; }
+        #video, #canvas {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 4/3;
+            height: auto;
+            border-radius: 8px;
+            border: 1.5px solid #e0e0e0;
+            background: #000;
+            display: block;
+        }
+        #face-guide { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:2; }
+        .guide-label { position:absolute; left:50%; bottom:10px; transform:translateX(-50%); background:#fff; border-radius:18px; padding:4px 12px; font-size:0.95em; color:#222; box-shadow:0 2px 8px #0001; z-index:3; }
+        .api-btns { display: flex; gap: 6px; margin-bottom: 0; }
+        @media (max-width: 600px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .card { padding: 10px 4vw 8px 4vw; }
+            h2, h3 { font-size: 1em; }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>얼굴 등록 시스템</h1>
-
-        <!-- 로그인 섹션 -->
-        <div class="section">
-            <div class="section-title"><span class="icon">🔑</span>로그인</div>
-            <div class="input-row">
-                <input type="text" id="login_email" placeholder="이메일" />
-                <input type="password" id="login_password" placeholder="비밀번호" />
-            </div>
-            <div class="input-row">
-                <button class="btn" onclick="login()">로그인</button>
-            </div>
-            <div id="login_result"></div>
-            <div id="token_box" class="token-box" style="display:none;"></div>
+    <!-- 통합 토큰 입력란 -->
+    <div class="card" style="max-width: 900px; margin: 24px auto 0 auto;">
+        <div class="input-row">
+            <input type="text" id="global_token" placeholder="Access Token 입력 (모든 기능 공통)" style="width:100%;" />
+            <button class="btn" type="button" onclick="copyToken()">복사</button>
         </div>
-
-        <!-- 카메라 영역 -->
-        <div class="section">
-            <div class="section-title"><span class="icon">📷</span>카메라</div>
-            <div class="camera" style="position:relative; width:320px; height:240px; margin:0 auto;">
-                <video id="video" autoplay style="width:100%; height:100%; border-radius:10px; z-index:1; background:#000;"></video>
-                <canvas id="canvas" style="display:none"></canvas>
-                <div id="face-guide" style="position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:2;">
-                    <svg width="100%" height="100%">
-                        <ellipse cx="50%" cy="50%" rx="28%" ry="46%" style="fill:none;stroke:#e74c3c;stroke-width:3;stroke-dasharray:7 5"/>
-                    </svg>
+    </div>
+    <div class="main-grid">
+        <div>
+            <div class="card">
+                <h2>회원가입</h2>
+                <form id="signupForm">
+                    <div class="input-row">
+                        <input name="name" type="text" placeholder="이름" required />
+                        <input name="email" type="email" placeholder="이메일" required />
+                    </div>
+                    <div class="input-row">
+                        <input name="password" type="password" placeholder="비밀번호" required />
+                        <input name="password2" type="password" placeholder="비밀번호 확인" required />
+                    </div>
+                    <div class="input-row">
+                        <input name="phone" type="text" placeholder="휴대폰번호" required />
+                    </div>
+                    <button type="submit" class="btn" style="width:100%;margin-top:6px;">회원가입</button>
+                </form>
+                <div id="signupResult" style="margin-top:10px;font-weight:bold;text-align:center;"></div>
+            </div>
+            <div class="card">
+                <h2>로그인</h2>
+                <div class="input-row">
+                    <input type="text" id="login_email" placeholder="이메일" />
+                    <input type="password" id="login_password" placeholder="비밀번호" />
                 </div>
-                <div style="position:absolute; left:50%; bottom:12px; transform:translateX(-50%); background:#fff; border-radius:18px; padding:6px 18px; font-size:0.98em; color:#222; box-shadow:0 2px 8px #0001; z-index:3;">
-                    카메라를 정면으로 바라봐 주세요
+                <button class="btn" style="width:100%;margin-bottom:6px;" onclick="login()">로그인</button>
+                <div id="login_result"></div>
+                <div id="token_box" class="token-box" style="display:none;"></div>
+            </div>
+            <div class="card">
+                <h2>DB 얼굴 등록/상태조회</h2>
+                <div class="input-row">
+                    <input type="number" id="db_ticket_id" placeholder="티켓 ID" />
+                </div>
+                <div class="input-row">
+                    <select id="db_face_verified">
+                        <option value="true">등록됨</option>
+                        <option value="false">미등록</option>
+                    </select>
+                    <button class="btn" type="button" onclick="dbRegisterFace()">등록</button>
+                    <button class="btn" type="button" onclick="dbGetFaceStatus()">조회</button>
+                </div>
+                <div id="db_result"></div>
+            </div>
+            <div class="card">
+                <h2>AWS 얼굴 등록/인증</h2>
+                <div class="input-row">
+                    <input type="number" id="aws_ticket_id" placeholder="티켓 ID" />
+                </div>
+                <div class="api-btns">
+                    <button class="btn" type="button" onclick="awsRegisterFace()">AWS 등록</button>
+                    <button class="btn" type="button" onclick="awsAuthFace()">AWS 인증</button>
+                </div>
+                <div id="aws_result"></div>
+            </div>
+            <div class="card">
+                <h2>AWS 얼굴 목록/삭제</h2>
+                <div class="input-row">
+                    <button class="btn" type="button" onclick="loadAwsFaceList()">목록 새로고침</button>
+                </div>
+                <ul id="aws_face_list"></ul>
+                <div id="aws_list_result"></div>
+            </div>
+        </div>
+        <div>
+            <div class="card">
+                <h2>카메라</h2>
+                <div class="camera-box" style="position:relative; width:100%; max-width:400px; aspect-ratio:4/3; margin:0 auto;">
+                    <video id="video" autoplay playsinline style="width:100%; aspect-ratio:4/3; background:#000; border-radius:10px;"></video>
+                    <canvas id="canvas" style="display:none; aspect-ratio:4/3;"></canvas>
+                    <div id="face-guide" style="position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:2;">
+                        <svg width="100%" height="100%" viewBox="0 0 400 300" preserveAspectRatio="none">
+                            <ellipse cx="200" cy="150" rx="100" ry="110" style="fill:none;stroke:#e74c3c;stroke-width:3;stroke-dasharray:7 5"/>
+                        </svg>
+                    </div>
+                    <div class="guide-label">카메라를 정면으로 바라봐 주세요</div>
+                </div>
+                <div class="center" style="margin:10px 0 0 0;">
+                    <button class="btn" onclick="startCamera()">카메라 시작</button>
                 </div>
             </div>
-            <div class="center">
-                <button class="btn" onclick="startCamera()">카메라 시작</button>
+            <div class="card">
+                <h2>가이드라인 얼굴 체크</h2>
+                <div class="center">
+                    <button id="captureBtn" class="btn" style="margin:10px 0;">캡처 및 얼굴 체크</button>
+                </div>
+                <div id="result" style="margin-top:10px; font-weight:bold; text-align:center;"></div>
             </div>
         </div>
-
-        <!-- DB 기반 얼굴 등록/상태조회 테스트 영역 -->
-        <div class="section">
-            <div class="section-title"><span class="icon">🗄️</span>DB 기반 얼굴 등록/상태조회</div>
-            <div class="input-row">
-                <input type="text" id="db_token" placeholder="Access Token 입력" />
-                <input type="number" id="db_ticket_id" placeholder="티켓 ID" />
-            </div>
-            <div class="input-row">
-                <select id="db_face_verified">
-                    <option value="true">등록됨 (true)</option>
-                    <option value="false">미등록 (false)</option>
-                </select>
-                <button class="btn" type="button" onclick="dbRegisterFace()">DB 얼굴 등록(PATCH)</button>
-                <button class="btn" type="button" onclick="dbGetFaceStatus()">DB 얼굴 상태조회(GET)</button>
-            </div>
-            <div id="db_result"></div>
-        </div>
-
-        <!-- AWS Rekognition 등록/인증 테스트 영역 -->
-        <div class="section">
-            <div class="section-title"><span class="icon">☁️</span>AWS Rekognition 등록/인증</div>
-            <div class="input-row">
-                <input type="text" id="aws_token" placeholder="Access Token 입력" />
-                <input type="number" id="aws_ticket_id" placeholder="티켓 ID" />
-            </div>
-            <div class="input-row">
-                <button class="btn" type="button" onclick="awsRegisterFace()">AWS 얼굴 등록(POST)</button>
-                <button class="btn" type="button" onclick="awsAuthFace()">AWS 얼굴 인증(POST)</button>
-            </div>
-            <div id="aws_result"></div>
-        </div>
-
-        <!-- AWS Rekognition 얼굴 목록/삭제 테스트 영역 -->
-        <div class="section">
-            <div class="section-title"><span class="icon">📄</span>AWS 등록 얼굴 목록/삭제</div>
-            <div class="input-row">
-                <input type="text" id="aws_list_token" placeholder="Access Token 입력" />
-                <button class="btn" type="button" onclick="loadAwsFaceList()">목록 새로고침</button>
-            </div>
-            <ul id="aws_face_list"></ul>
-            <div id="aws_list_result"></div>
-        </div>
-
-        <!-- 결과 메시지 영역 -->
-        <div id="result"></div>
     </div>
 
     <script>
         let stream = null;
         let registeredFace = null;
+
+        // 토큰 가져오기 함수
+        function getToken() {
+            return document.getElementById('global_token').value;
+        }
 
         // 카메라 시작
         async function startCamera() {
@@ -140,7 +179,7 @@
 
         // DB 기반 얼굴 등록 (PATCH)
         async function dbRegisterFace() {
-            const token = document.getElementById('db_token').value;
+            const token = getToken();
             const ticketId = document.getElementById('db_ticket_id').value;
             const faceVerified = document.getElementById('db_face_verified').value;
             if (!token || !ticketId) {
@@ -166,7 +205,7 @@
         }
         // DB 기반 얼굴 상태조회 (GET)
         async function dbGetFaceStatus() {
-            const token = document.getElementById('db_token').value;
+            const token = getToken();
             const ticketId = document.getElementById('db_ticket_id').value;
             if (!token || !ticketId) {
                 document.getElementById('db_result').innerHTML = '<div class="result error">토큰과 티켓ID를 입력하세요.</div>';
@@ -189,24 +228,20 @@
         }
         // AWS Rekognition 얼굴 등록 (POST)
         async function awsRegisterFace() {
-            const token = document.getElementById('aws_token').value;
+            const token = getToken();
             const ticketId = document.getElementById('aws_ticket_id').value;
             if (!token || !ticketId) {
                 document.getElementById('aws_result').innerHTML = '<div class="result error">토큰과 티켓ID를 입력하세요.</div>';
                 return;
             }
             // 가이드라인 체크
-            if (!(await checkFaceInEllipse())) {
-                document.getElementById('aws_result').innerHTML = '<div class="result error">얼굴을 가이드라인 안에 맞춰주세요.</div>';
-                return;
-            }
             // 카메라 캡처
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
             const context = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0);
+            canvas.width = 400;
+            canvas.height = 300;
+            context.drawImage(video, 0, 0, 400, 300);
             const imageData = canvas.toDataURL('image/jpeg').split(',')[1];
             try {
                 const response = await fetch(`/api/v1/tickets/${ticketId}/aws-register/`, {
@@ -227,24 +262,19 @@
         }
         // AWS Rekognition 얼굴 인증 (POST)
         async function awsAuthFace() {
-            const token = document.getElementById('aws_token').value;
+            const token = getToken();
             const ticketId = document.getElementById('aws_ticket_id').value;
             if (!token || !ticketId) {
                 document.getElementById('aws_result').innerHTML = '<div class="result error">토큰과 티켓ID를 입력하세요.</div>';
-                return;
-            }
-            // 가이드라인 체크
-            if (!(await checkFaceInEllipse())) {
-                document.getElementById('aws_result').innerHTML = '<div class="result error">얼굴을 가이드라인 안에 맞춰주세요.</div>';
                 return;
             }
             // 카메라 캡처
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
             const context = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0);
+            canvas.width = 400;
+            canvas.height = 300;
+            context.drawImage(video, 0, 0, 400, 300);
             const imageData = canvas.toDataURL('image/jpeg').split(',')[1];
             try {
                 const response = await fetch(`/api/v1/tickets/${ticketId}/aws-auth/`, {
@@ -265,7 +295,7 @@
         }
         // AWS Rekognition 얼굴 목록 불러오기
         async function loadAwsFaceList() {
-            const token = document.getElementById('aws_list_token').value;
+            const token = getToken();
             if (!token) {
                 document.getElementById('aws_list_result').innerHTML = '<div class="result error">토큰을 입력하세요.</div>';
                 return;
@@ -305,7 +335,7 @@
         }
         // AWS Rekognition 얼굴 삭제
         async function deleteAwsFace(faceId) {
-            const token = document.getElementById('aws_list_token').value;
+            const token = getToken();
             if (!faceId) {
                 document.getElementById('aws_list_result').innerHTML = '<div class="result error">face_id가 필요합니다.</div>';
                 return;
@@ -358,15 +388,14 @@
                 const result = await response.json();
                 if (response.ok) {
                     let token = result.token || result.access || result.key || '';
-                    showLoginResult('로그인 성공!<br><pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
+                    showLoginResult('로그인 성공!', 'success');
                     if (token) {
-                        // 토큰 입력란에 자동 입력
-                        document.getElementById('db_token').value = token;
-                        document.getElementById('aws_token').value = token;
-                        document.getElementById('aws_list_token').value = token;
+                        document.getElementById('global_token').value = token;
                         document.getElementById('token_box').style.display = '';
                         document.getElementById('token_box').innerHTML = 'Access Token:<br>' + token + '<br><button onclick="copyToken()" class="btn" style="margin-top:6px;">복사</button>';
                     }
+                    // 전체 JSON 응답 토글 표시
+                    document.getElementById('login_result').innerHTML += `<div style='margin-top:8px;'><button class='btn' style='font-size:0.95em;padding:4px 10px;' onclick='toggleLoginJson()'>전체 응답 보기</button><pre id='login_json' style='display:none;margin-top:6px;background:#f8fafc;border-radius:6px;padding:8px 6px;'>${JSON.stringify(result, null, 2)}</pre></div>`;
                 } else {
                     showLoginResult('로그인 실패: ' + (result.message || JSON.stringify(result)), 'error');
                 }
@@ -379,118 +408,87 @@
             resultDiv.innerHTML = `<div class="result ${type}">${message}</div>`;
         }
         function copyToken() {
-            const token = document.getElementById('db_token').value;
+            const token = getToken();
             if (token) {
                 navigator.clipboard.writeText(token);
                 alert('토큰이 복사되었습니다!');
             }
         }
-    </script>
-    <!-- 1. face-api.js CDN -->
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
-    <!-- 2. 내 JS 코드 (defer 필수) -->
-    <script defer>
-    let faceInEllipse = false;
-
-    // 얼굴 가이드라인 체크 함수 (face-api.js 필요)
-    async function checkFaceInEllipse() {
-        const video = document.getElementById('video');
-        if (!video || video.readyState !== 4) {
-            return false;
-        }
-        if (!window.faceapi) return false;
-        const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions());
-        if (!detections) return false;
-        const box = detections.box;
-        const faceCenterX = box.x + box.width / 2;
-        const faceCenterY = box.y + box.height / 2;
-        const videoW = video.videoWidth;
-        const videoH = video.videoHeight;
-        const ellipseCX = videoW / 2;
-        const ellipseCY = videoH / 2;
-        // 실제 인식 타원 (가이드라인보다 더 작게)
-        const rx = videoW * 0.12;
-        const ry = videoH * 0.20;
-        const normX = (faceCenterX - ellipseCX) / rx;
-        const normY = (faceCenterY - ellipseCY) / ry;
-        return (normX * normX + normY * normY) <= 1;
-    }
-
-    // [모델 로드 및 주기적 얼굴 위치 체크] 페이지 로드 시 모델 로드, 0.7초마다 체크
-    window.addEventListener('DOMContentLoaded', async function() {
-        await faceapi.nets.tinyFaceDetector.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models');
-        setInterval(checkFaceInEllipse, 700);
-    });
-
-    // 반드시 실제 코드로 함수 선언!
-    async function registerFaceToServerWithUserAndTicket(imageData, ticketId, token) {
-        try {
-            const response = await fetch(`/api/v1/tickets/${ticketId}/register/`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify({
-                    face_verified: true,
-                    image: imageData // ← base64 이미지도 같이 보냄
-                })
+        // 회원가입 폼 처리
+        const signupForm = document.getElementById('signupForm');
+        const signupResult = document.getElementById('signupResult');
+        signupForm.onsubmit = async function(e) {
+          e.preventDefault();
+          signupResult.innerText = '회원가입 처리 중...';
+          const formData = new FormData(signupForm);
+          const data = Object.fromEntries(formData.entries());
+          try {
+            const res = await fetch('/api/v1/user/signup/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(data)
             });
-            const result = await response.json();
-            if (response.ok) {
-                showResult('<pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
+            const result = await res.json();
+            if (res.status === 201) {
+              signupResult.style.color = '#22c55e';
+              signupResult.innerText = '회원가입 성공!';
+              signupForm.reset();
             } else {
-                showResult('<pre>' + JSON.stringify(result, null, 2) + '</pre>', 'error');
+              signupResult.style.color = '#e53e3e';
+              // 에러 메시지 파싱
+              if (result.email) signupResult.innerText = result.email;
+              else if (result.password2) signupResult.innerText = result.password2;
+              else signupResult.innerText = '회원가입 실패: ' + JSON.stringify(result);
             }
-        } catch (err) {
-            showResult('서버 오류: ' + err.message, 'error');
-        }
-    }
+          } catch (e) {
+            signupResult.style.color = '#e53e3e';
+            signupResult.innerText = '회원가입 요청 실패: ' + e;
+          }
+        };
 
-    async function verifyFace(ticketId, token) {
-        if (!ticketId) {
-            showResult('인증할 티켓 ID를 입력해주세요.', 'error');
-            return;
-        }
-        try {
-            const response = await fetch(`/api/v1/tickets/${ticketId}/verify/`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify({ face_matches: 99 }) // 예시
-            });
-            const result = await response.json();
-            if (response.ok) {
-                showResult('<pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
-            } else {
-                showResult('<pre>' + JSON.stringify(result, null, 2) + '</pre>', 'error');
-            }
-        } catch (err) {
-            showResult('서버 오류: ' + err.message, 'error');
-        }
-    }
+        // 캡처 및 얼굴 체크 버튼 처리 (가이드라인 체크만)
+        const captureBtn = document.getElementById('captureBtn');
+        captureBtn.onclick = async function() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            // 4:3 비율로 고정
+            canvas.width = 400;
+            canvas.height = 300;
+            context.drawImage(video, 0, 0, 400, 300);
+            const imageData = canvas.toDataURL('image/jpeg');
 
-    async function getFaceAuthStatus(ticketId, token) {
-        try {
-            const response = await fetch(`/api/v1/tickets/${ticketId}/auth/`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': 'Bearer ' + token
-                }
-            });
-            const result = await response.json();
-            if (response.ok) {
-                showResult('<pre>' + JSON.stringify(result, null, 2) + '</pre>', 'success');
-            } else {
-                showResult('<pre>' + JSON.stringify(result, null, 2) + '</pre>', 'error');
+            // 1. 가이드라인 체크 API 호출
+            let guideCheck;
+            try {
+                const res = await fetch('/api/v1/face/check/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: imageData })
+                });
+                guideCheck = await res.json();
+            } catch (e) {
+                showResult('가이드라인 체크 API 오류: ' + e, 'error');
+                return;
             }
-        } catch (err) {
-            showResult('서버 오류: ' + err.message, 'error');
+
+            if (guideCheck.is_in_guide) {
+                showResult('가이드라인 안에 얼굴이 있습니다.', 'success');
+            } else {
+                showResult('가이드라인 안에 얼굴을 위치시켜주세요.', 'error');
+            }
+        };
+
+        // 로그인 전체 JSON 토글 함수
+        function toggleLoginJson() {
+            const el = document.getElementById('login_json');
+            if (el.style.display === 'none') {
+                el.style.display = '';
+            } else {
+                el.style.display = 'none';
+            }
         }
-    }
     </script>
 </body>
 </html>

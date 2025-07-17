@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from events.views import EventListAPIView, EventDetailAPIView, EventSeatsAPIView, BuyTicketsView, PayTicketView
 from tickets.views import FaceRegisterAPIView, TicketFaceAuthAPIView, face_register_page, MyTicketListView, AWSFaceRecognitionRegister, AWSFaceRecognitionAuth
-from tickets.views import FaceListAPIView, FaceDeleteAPIView, ShareTicketsView, TicketQRView, checkin_ticket_view, TicketDetailView, TicketCancelView
+from tickets.views import FaceListAPIView, FaceDeleteAPIView, ShareTicketsView, TicketQRView, checkin_ticket_view, TicketDetailView, TicketCancelView, FaceGuideCheckAPIView
 from user.views import UserSignupView, UserLoginView, UserLogoutView
 
 from django.conf import settings
@@ -44,6 +44,7 @@ urlpatterns = [
     path('api/v1/tickets/face-register/', face_register_page, name='face-register'),
     path('api/v1/tickets/face-list/', FaceListAPIView.as_view(), name='face-list'),
     path('api/v1/tickets/face-delete/', FaceDeleteAPIView.as_view(), name='face-delete'),
+    path('api/v1/face/check/', FaceGuideCheckAPIView.as_view(), name='face-guide-check'),
 
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

@@ -95,6 +95,18 @@ class AWSFaceRecognitionRegister(APIView):
                 region_name='ap-northeast-2'
             )
             collection_id = 'my-tickets'
+            # 중복 ExternalImageId 체크
+            faces = []
+            response = rekognition.list_faces(CollectionId=collection_id, MaxResults=60)
+            faces.extend(response.get('Faces', []))
+            next_token = response.get('NextToken')
+            while next_token:
+                response = rekognition.list_faces(CollectionId=collection_id, NextToken=next_token, MaxResults=60)
+                faces.extend(response.get('Faces', []))
+                next_token = response.get('NextToken')
+            if any(face.get('ExternalImageId') == external_image_id for face in faces):
+                return Response({"message": "이미 등록된 얼굴이 있습니다. 중복 등록이 불가합니다.", "ExternalImageId": external_image_id}, status=400)
+            # 중복이 아니면 등록 진행
             response = rekognition.index_faces(
                 CollectionId=collection_id,
                 Image={'Bytes': image_bytes},
@@ -175,6 +187,7 @@ class AWSFaceRecognitionAuth(APIView):
             return Response({"message": "image가 필요합니다."}, status=400)
         try:
             import base64, os, boto3
+            from .models import Ticket
             image_bytes = base64.b64decode(image_base64)
             user_id = request.user.id
             external_image_id = f"user_{user_id}_ticket_{ticket_id}"
@@ -189,13 +202,23 @@ class AWSFaceRecognitionAuth(APIView):
                 CollectionId=collection_id,
                 Image={'Bytes': image_bytes},
                 MaxFaces=5,
-                FaceMatchThreshold=95
+                FaceMatchThreshold=80
             )
             face_matches = response.get('FaceMatches', [])
-            # ExternalImageId가 정확히 일치하는 것만 필터링
+            # 1. 등록된 얼굴이 아예 없는 경우 (FaceMatches가 없음)
+            if not face_matches:
+                return Response({"message": "등록된 얼굴이 없습니다. (등록된 FaceId 없음)", "Similarity": 0}, status=200)
+            # 2. ExternalImageId가 정확히 일치하는 것만 필터링
             filtered = [f for f in face_matches if f['Face'].get('ExternalImageId') == external_image_id]
             if filtered:
                 best = max(filtered, key=lambda f: f['Similarity'])
+                # 3. 유사도가 99.0% 미만이면 인증 실패(등록된 얼굴이지만 다른 사람)
+                if best['Similarity'] < 99.0:
+                    return Response({
+                        "message": "얼굴이 일치하지 않습니다. (등록된 얼굴이지만 다른 사람)",
+                        "Similarity": best['Similarity'],
+                        "ExternalImageId": best['Face']['ExternalImageId']
+                    }, status=200)
                 return Response({
                     "message": "얼굴 인증 성공",
                     "FaceId": best['Face']['FaceId'],
@@ -203,7 +226,13 @@ class AWSFaceRecognitionAuth(APIView):
                     "Similarity": best['Similarity']
                 }, status=200)
             else:
-                return Response({"message": "얼굴 인증 실패", "Similarity": 0}, status=200)
+                # 4. 등록된 얼굴은 있으나 user_id/ticket_id가 다름 (다른 사람의 얼굴)
+                # 가장 유사한 Face의 ExternalImageId를 반환
+                best = max(face_matches, key=lambda f: f['Similarity'])
+                return Response({
+                    "message": "해당 티켓에 등록되지 않은 사용자입니다.",
+                    "Similarity": best['Similarity']
+                }, status=200)
         except Exception as e:
             return Response({"message": "AWS Rekognition 처리 중 오류", "error": str(e)}, status=500)
 
@@ -883,4 +912,47 @@ def checkin_ticket_view(request, ticket_id):
     return render(request, 'checkin_ticket.html', context)
 
 def face_register_page(request):
-    return render(request, 'face_register.html')
+    return render(request, 'tickets/face_register.html')
+
+class FaceGuideCheckAPIView(APIView):
+    def post(self, request):
+        image_data = request.data.get('image')
+        if not image_data:
+            return Response({"error": "No image provided"}, status=400)
+
+        # base64 디코딩
+        if image_data.startswith("data:image"):
+            image_data = image_data.split(",")[1]
+        img_bytes = base64.b64decode(image_data)
+
+        # AWS Rekognition 호출
+        rekognition = boto3.client(
+            'rekognition',
+            aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
+            region_name='ap-northeast-2'
+        )
+        result = rekognition.detect_faces(
+            Image={'Bytes': img_bytes},
+            Attributes=['DEFAULT']
+        )
+
+        if not result['FaceDetails']:
+            return Response({"is_in_guide": False, "message": "얼굴이 감지되지 않았습니다."})
+
+        # bounding box 정보 (0~1 비율)
+        box = result['FaceDetails'][0]['BoundingBox']
+        # 예시: 프론트에서 사용하는 카메라 뷰 크기
+        viewW, viewH = 400, 300
+        face_cx = (box['Left'] + box['Width']/2) * viewW
+        face_cy = (box['Top'] + box['Height']/2) * viewH
+        ellipse_cx, ellipse_cy = viewW/2, viewH/2
+        rx, ry = viewW*0.1, viewH*0.075
+        norm_x = (face_cx - ellipse_cx) / rx
+        norm_y = (face_cy - ellipse_cy) / ry
+        is_in_guide = (norm_x**2 + norm_y**2) <= 1
+
+        return Response({
+            "is_in_guide": is_in_guide,
+            "message": "얼굴이 가이드라인 안에 있습니다." if is_in_guide else "가이드라인 안에 얼굴이 없습니다."
+        })
