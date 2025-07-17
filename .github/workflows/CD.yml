@@ -37,6 +37,7 @@ jobs:
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/ticket-backend:dev-latest
             cd /home/ubuntu/Backend
             docker-compose down
-            docker-compose up -d
+            docker-compose pull
+            docker-compose up -d --force-recreate
             docker exec -i django-backend python manage.py migrate
             docker exec -i django-backend python manage.py collectstatic --noinput
