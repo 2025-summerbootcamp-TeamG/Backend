@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   web:
-    image: eunseokyoon/ticket-backend:dev-latest
+    image: ${{ secrets.DOCKERHUB_USERNAME }}/ticket-backend:dev-latest
     container_name: django-backend
     command: gunicorn ticket_backend.wsgi:application --bind 0.0.0.0:8000
     ports:
