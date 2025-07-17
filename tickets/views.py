@@ -915,6 +915,54 @@ def face_register_page(request):
     return render(request, 'tickets/face_register.html')
 
 class FaceGuideCheckAPIView(APIView):
+    @extend_schema(
+        summary="얼굴 가이드라인 체크",
+        description="base64 인코딩된 얼굴 이미지를 받아, 얼굴이 가이드라인(타원) 안에 있는지 판별합니다.",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'image': {'type': 'string', 'description': 'base64 인코딩 얼굴 이미지'},
+                },
+                'required': ['image']
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="성공",
+                examples=[
+                    OpenApiExample(
+                        "InGuide",
+                        value={"is_in_guide": True, "message": "얼굴이 가이드라인 안에 있습니다."},
+                        status_codes=["200"]
+                    ),
+                    OpenApiExample(
+                        "OutOfGuide",
+                        value={"is_in_guide": False, "message": "가이드라인 안에 얼굴이 없습니다."},
+                        status_codes=["200"]
+                    ),
+                    OpenApiExample(
+                        "NoFace",
+                        value={"is_in_guide": False, "message": "얼굴이 감지되지 않았습니다."},
+                        status_codes=["200"]
+                    ),
+                ]
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="입력값 오류",
+                examples=[
+                    OpenApiExample(
+                        "NoImage",
+                        value={"error": "No image provided"},
+                        status_codes=["400"]
+                    )
+                ]
+            ),
+        },
+        tags=["tickets"]
+    )
     def post(self, request):
         image_data = request.data.get('image')
         if not image_data:
