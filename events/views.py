@@ -166,9 +166,10 @@ class PayTicketView(APIView):
                     )
                 ]
             ),
-        }
+        },
+        methods=["PATCH"]
     )
-    def post(self, request, purchase_id):
+    def patch(self, request, purchase_id):
         data = request.data
         name = data.get('name')
         phone = data.get('phone')
@@ -191,6 +192,8 @@ class PayTicketView(APIView):
         purchase.phone_number = phone
         purchase.email = email
         purchase.save()
+
+        updated_count = Ticket.objects.filter(purchase_id=int(purchase_id)).update(ticket_status="reserved")
 
         return Response({'message': '결제가 완료되었습니다.'}, status=status.HTTP_200_OK)
 

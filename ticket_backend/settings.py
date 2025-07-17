@@ -130,8 +130,8 @@ AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Your Project API',
-    'DESCRIPTION': 'API documentation for your ticketing project.',
+    'TITLE': 'TeamG Face Ticketing API',
+    'DESCRIPTION': 'API documentation for face ticketing project.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
