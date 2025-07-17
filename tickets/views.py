@@ -23,6 +23,7 @@ from django.http import JsonResponse
 import qrcode
 from io import BytesIO
 
+## 도커 컨테이너 제대로 빌드되는지 확인
 
 ###############################################
 # 얼굴 관련 API 모음 (등록/인증/상태조회/DB/AWS)
@@ -1004,3 +1005,4 @@ class FaceGuideCheckAPIView(APIView):
             "is_in_guide": is_in_guide,
             "message": "얼굴이 가이드라인 안에 있습니다." if is_in_guide else "가이드라인 안에 얼굴이 없습니다."
         })
+        
