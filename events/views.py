@@ -341,7 +341,6 @@ class EventDetailAPIView(APIView):
                 "location": event.location,
                 "price": f"₩{min_price:,} ~ ₩{max_price:,}" if min_price != max_price else f"₩{min_price:,}",
                 "thumbnail": event.image_url,
-                "tag": "인기",
                 "description": event.description,
                 "schedules": schedule_list,
                 "max_reserve": event.max_reserve,
