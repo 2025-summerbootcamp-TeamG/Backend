@@ -7,6 +7,16 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = "email" 
 
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Add custom claims for mypage
+        token['name'] = user.name
+        token['email'] = user.email
+        
+        return token
+
 
 User = get_user_model()
 
