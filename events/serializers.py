@@ -72,7 +72,6 @@ class EventDetailResponseSerializer(serializers.Serializer):
     location = serializers.CharField()
     price = serializers.CharField()
     thumbnail = serializers.CharField()
-    tag = serializers.CharField()
     description = serializers.CharField()
     schedules = serializers.ListField(child=serializers.DictField())
     max_reserve = serializers.CharField()
