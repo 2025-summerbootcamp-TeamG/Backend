@@ -29,11 +29,12 @@ class EventListSerializer(serializers.ModelSerializer):
     tag = serializers.SerializerMethodField()
     view_count = serializers.IntegerField()
     created_at = serializers.DateTimeField()
+    genre = serializers.CharField()
 
     class Meta:
         model = Event
         fields = [
-            'id', 'name', 'artist', 'location', 'date', 'thumbnail', 'price', 'status', 'tag', 'view_count', 'created_at'
+            'id', 'name', 'artist', 'location', 'date', 'thumbnail', 'price', 'status', 'tag', 'view_count', 'created_at', 'genre'
         ]
 
     def get_date(self, obj):
