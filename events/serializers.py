@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import Event, EventTime, Zone
 
-
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
@@ -90,9 +89,6 @@ class SeatInfoSerializer(serializers.Serializer):
 class EventSeatsResponseSerializer(serializers.Serializer):
     statusCode = serializers.IntegerField()
     message = serializers.CharField()
-
-    data = serializers.ListField(child=EventSeatsDataSerializer())
-
     data = SeatInfoSerializer(many=True, allow_null=True)
 
 
