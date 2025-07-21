@@ -32,7 +32,7 @@ class EventListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = [
-            'id', 'title', 'artist', 'location', 'date', 'thumbnail', 'price', 'status', 'tag'
+            'id', 'name', 'artist', 'location', 'date', 'thumbnail', 'price', 'status', 'tag'
         ]
 
     def get_date(self, obj):
