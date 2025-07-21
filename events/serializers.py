@@ -27,11 +27,13 @@ class EventListSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
     tag = serializers.SerializerMethodField()
+    view_count = serializers.IntegerField()
+    created_at = serializers.DateTimeField()
 
     class Meta:
         model = Event
         fields = [
-            'id', 'name', 'artist', 'location', 'date', 'thumbnail', 'price', 'status', 'tag'
+            'id', 'name', 'artist', 'location', 'date', 'thumbnail', 'price', 'status', 'tag', 'view_count', 'created_at'
         ]
 
     def get_date(self, obj):
@@ -73,6 +75,7 @@ class EventDetailResponseSerializer(serializers.Serializer):
     description = serializers.CharField()
     schedules = serializers.ListField(child=serializers.DictField())
     max_reserve = serializers.CharField()
+    view_count = serializers.IntegerField()
 
 class EventSeatsDataSerializer(serializers.Serializer):
     schedules = EventScheduleSerializer(many=True)

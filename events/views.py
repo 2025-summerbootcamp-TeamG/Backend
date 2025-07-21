@@ -345,6 +345,7 @@ class EventDetailAPIView(APIView):
                 "description": event.description,
                 "schedules": schedule_list,
                 "max_reserve": event.max_reserve,
+                "view_count": event.view_count,
             }
             serializer = EventDetailResponseSerializer(data)
             return Response(serializer.data)
