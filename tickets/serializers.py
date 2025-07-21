@@ -1,10 +1,59 @@
 from rest_framework import serializers
 from .models import Ticket
+from user.models import User
+from user.serializers import UserSignupSerializer
+from .models import Purchase
+from events.models import Seat, Zone, EventTime, Event
+from events.serializers import EventSerializer, EventTimeSerializer, ZoneSerializer
+
+class EventNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Event
+        fields = ['id', 'name', 'artist', 'location', 'description', 'genre', 'age_rating', 'image_url', 'created_at', 'updated_at']
+
+class EventTimeNestedSerializer(serializers.ModelSerializer):
+    event = EventNestedSerializer()
+    class Meta:
+        model = EventTime
+        fields = ['id', 'event_date', 'start_time', 'end_time', 'event']
+
+class ZoneNestedSerializer(serializers.ModelSerializer):
+    event_time = EventTimeNestedSerializer()
+    class Meta:
+        model = Zone
+        fields = ['id', 'rank', 'price', 'event_time']
+
+class SeatNestedSerializer(serializers.ModelSerializer):
+    zone = ZoneNestedSerializer()
+    class Meta:
+        model = Seat
+        fields = ['id', 'seat_number', 'seat_status', 'zone']
+
+class PurchaseNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Purchase
+        fields = ['id', 'purchase_status', 'created_at', 'updated_at', 'purchaser', 'phone_number', 'email']
+
+class UserSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'name', 'email', 'phone']
 
 class TicketSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    seat = SeatNestedSerializer()
+    purchase = PurchaseNestedSerializer()
+    user = UserSimpleSerializer()
+
     class Meta:
         model = Ticket
-        fields = '__all__'
+        fields = ['id', 'ticket_status', 'booked_at', 'face_verified', 'verified_at', 'created_at', 'updated_at', 'is_deleted', 'image_url', 'user', 'seat', 'purchase']
+
+    def get_image_url(self, obj):
+        try:
+            return obj.seat.zone.event_time.event.image_url
+        except Exception:
+            return None
 
 
 class FaceRegisterRequestSerializer(serializers.Serializer):
