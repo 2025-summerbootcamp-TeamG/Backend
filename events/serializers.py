@@ -20,7 +20,7 @@ class ZoneSerializer(serializers.ModelSerializer):
 
 class EventListSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='pk')
-    title = serializers.CharField(source='name')           # 타이틀은 행사명!
+    name = serializers.CharField(source='name')           # 타이틀은 행사명!
     artist = serializers.CharField()                       # 출연진 정보
     location = serializers.CharField()
     date = serializers.SerializerMethodField()
