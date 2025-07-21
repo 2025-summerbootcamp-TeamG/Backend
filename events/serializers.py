@@ -26,7 +26,6 @@ class EventListSerializer(serializers.ModelSerializer):
     thumbnail = serializers.CharField(source='image_url')
     price = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
-    tag = serializers.SerializerMethodField()
     view_count = serializers.IntegerField()
     created_at = serializers.DateTimeField()
     genre = serializers.CharField()
@@ -34,7 +33,7 @@ class EventListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = [
-            'id', 'name', 'artist', 'location', 'date', 'thumbnail', 'price', 'status', 'tag', 'view_count', 'created_at', 'genre'
+            'id', 'name', 'artist', 'location', 'date', 'thumbnail', 'price', 'status', 'view_count', 'created_at', 'genre'
         ]
 
     def get_date(self, obj):
