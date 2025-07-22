@@ -495,7 +495,6 @@ class MyTicketListView(APIView):
         serializer = TicketListSerializer(tickets, many=True)
         return Response(serializer.data)
 
-@extend_schema(tags=["tickets"])
 class TicketDetailView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -513,14 +512,9 @@ class TicketDetailView(APIView):
         serializer = TicketDetailSerializer(ticket)
         return Response(serializer.data)
 
-@extend_schema(tags=["tickets"])
-class TicketCancelView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-
     @extend_schema(
-        summary="티켓 취소",
-        description="JWT 인증된 유저의 특정 티켓을 취소 처리합니다.",
+        summary="티켓 취소(삭제)",
+        description="JWT 인증된 유저의 특정 티켓을 취소(soft delete) 처리합니다.",
         parameters=[
             OpenApiParameter(name='ticket_id', description='티켓 ID', required=True, type=int, location=OpenApiParameter.PATH),
         ],
@@ -531,7 +525,14 @@ class TicketCancelView(APIView):
                 examples=[
                     OpenApiExample(
                         "Success",
-                        value={"id": 1, "user_id": 2, "ticket_status": "canceled", "seat": 10, "purchase": 5, "face_verified": True, "verified_at": "2024-07-16 12:00:00", "created_at": "2024-07-16T12:00:00Z", "updated_at": "2024-07-16T12:00:00Z", "is_deleted": False},
+                        value={
+                            "message": "티켓이 성공적으로 취소되었습니다.",
+                            "ticket_id": 1,
+                            "seat_id": 10,
+                            "ticket_status": "canceled",
+                            "is_deleted": True,
+                            "seat_status": "available"
+                        },
                         status_codes=["200"]
                     )
                 ]
@@ -549,10 +550,10 @@ class TicketCancelView(APIView):
             ),
         }
     )
-    def patch(self, request, ticket_id):
+    def delete(self, request, ticket_id):
         ticket = get_object_or_404(Ticket, id=ticket_id, user_id=request.user.id)
         ticket.ticket_status = 'canceled'
-        ticket.is_deleted = True
+        ticket.is_deleted = True  # 취소 시 soft delete 처리
         ticket.save()
 
         # 좌석 상태를 'available'로 변경
@@ -566,8 +567,14 @@ class TicketCancelView(APIView):
             with connection.cursor() as cursor:
                 cursor.execute("UPDATE purchase SET purchase_status=%s WHERE id=%s", ['취소', purchase_id])
 
-        serializer = TicketSerializer(ticket)
-        return Response(serializer.data)
+        return Response({
+            "message": "티켓이 성공적으로 취소되었습니다.",
+            "ticket_id": ticket.id,
+            "seat_id": seat.id,
+            "ticket_status": ticket.ticket_status,
+            "is_deleted": ticket.is_deleted,
+            "seat_status": seat.seat_status
+        }, status=status.HTTP_200_OK)
 
 @extend_schema(tags=["tickets"])
 class ShareTicketsView(APIView):
