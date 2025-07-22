@@ -229,7 +229,6 @@ class TicketDetailSerializer(serializers.ModelSerializer):
             return None
 
 class TicketListSerializer(serializers.ModelSerializer):
-    ticket_id = serializers.IntegerField(source='id')
     event_name = serializers.SerializerMethodField()
     event_date = serializers.SerializerMethodField()
     event_start_time = serializers.SerializerMethodField()
@@ -241,7 +240,8 @@ class TicketListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ticket
         fields = [
-            'ticket_id', 'event_name', 'event_date', 'event_start_time', 'event_location',
+            'id',
+            'event_name', 'event_date', 'event_start_time', 'event_location',
             'seat_rank', 'seat_number', 'ticket_status'
         ]
 
