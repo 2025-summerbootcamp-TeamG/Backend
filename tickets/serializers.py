@@ -176,3 +176,86 @@ class FaceDeleteSuccessSerializer(serializers.Serializer):
 class FaceDeleteErrorSerializer(serializers.Serializer):
     message = serializers.CharField()
     error = serializers.CharField()
+
+
+class TicketDetailSerializer(serializers.ModelSerializer):
+    event_name = serializers.SerializerMethodField()
+    event_date = serializers.SerializerMethodField()
+    event_time = serializers.SerializerMethodField()
+    event_location = serializers.SerializerMethodField()
+    seat_rank = serializers.SerializerMethodField()
+    seat_number = serializers.SerializerMethodField()
+    reservation_number = serializers.SerializerMethodField()
+    ticket_price = serializers.SerializerMethodField()
+    reservation_fee = serializers.SerializerMethodField()
+    total_price = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
+    verified_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M", source="verified_at", allow_null=True)
+
+    class Meta:
+        model = Ticket
+        fields = [
+            'id', 'event_name', 'event_date', 'event_time', 'event_location',
+            'seat_rank', 'seat_number', 'reservation_number',
+            'ticket_price', 'reservation_fee', 'total_price',
+            'face_verified', 'verified_at', 'image_url'
+        ]
+        extra_kwargs = {'id': {'source': 'ticket_id'}}
+
+    def get_event_name(self, obj):
+        return obj.seat.zone.event_time.event.name
+    def get_event_date(self, obj):
+        return obj.seat.zone.event_time.event_date.strftime('%Y-%m-%d')
+    def get_event_time(self, obj):
+        return obj.seat.zone.event_time.start_time.strftime('%H:%M')
+    def get_event_location(self, obj):
+        return obj.seat.zone.event_time.event.location
+    def get_seat_rank(self, obj):
+        return obj.seat.zone.rank
+    def get_seat_number(self, obj):
+        return obj.seat.seat_number
+    def get_reservation_number(self, obj):
+        return f"T{obj.seat.zone.event_time.event_date.strftime('%Y%m%d')}{obj.id:05d}"
+    def get_ticket_price(self, obj):
+        return obj.seat.zone.price
+    def get_reservation_fee(self, obj):
+        return 1000  # 정책에 따라 고정값
+    def get_total_price(self, obj):
+        return obj.seat.zone.price + 1000
+    def get_image_url(self, obj):
+        try:
+            return obj.seat.zone.event_time.event.image_url
+        except Exception:
+            return None
+
+class TicketListSerializer(serializers.ModelSerializer):
+    event_name = serializers.SerializerMethodField()
+    event_date = serializers.SerializerMethodField()
+    event_time = serializers.SerializerMethodField()
+    event_location = serializers.SerializerMethodField()
+    seat_info = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Ticket
+        fields = [
+            'id', 'event_name', 'event_date', 'event_time', 'event_location',
+            'seat_info', 'face_verified', 'image_url'
+        ]
+        extra_kwargs = {'id': {'source': 'ticket_id'}}
+
+    def get_event_name(self, obj):
+        return obj.seat.zone.event_time.event.name
+    def get_event_date(self, obj):
+        return obj.seat.zone.event_time.event_date.strftime('%Y-%m-%d')
+    def get_event_time(self, obj):
+        return obj.seat.zone.event_time.start_time.strftime('%H:%M')
+    def get_event_location(self, obj):
+        return obj.seat.zone.event_time.event.location
+    def get_seat_info(self, obj):
+        return f"{obj.seat.zone.rank} {obj.seat.seat_number}"
+    def get_image_url(self, obj):
+        try:
+            return obj.seat.zone.event_time.event.image_url
+        except Exception:
+            return None
