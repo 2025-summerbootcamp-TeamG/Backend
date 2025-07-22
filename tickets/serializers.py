@@ -179,6 +179,27 @@ class FaceDeleteErrorSerializer(serializers.Serializer):
 
 
 class TicketDetailSerializer(serializers.ModelSerializer):
+    """
+    티켓 상세정보 Serializer
+    응답 예시:
+    {
+        "id": 1,
+        "event_name": "콘서트명",
+        "event_date": "2024-08-01",
+        "event_time": "19:00",
+        "event_location": "서울",
+        "seat_rank": "A",
+        "seat_number": "12",
+        "reservation_number": "T2024080100001",
+        "ticket_price": 50000,
+        "reservation_fee": 1000,
+        "total_price": 51000,
+        "face_verified": false,
+        "verified_at": null,
+        "image_url": "http://...",
+        "is_deleted": false
+    }
+    """
     event_name = serializers.SerializerMethodField()
     event_date = serializers.SerializerMethodField()
     event_time = serializers.SerializerMethodField()
@@ -199,7 +220,8 @@ class TicketDetailSerializer(serializers.ModelSerializer):
             'event_name', 'event_date', 'event_time', 'event_location',
             'seat_rank', 'seat_number', 'reservation_number',
             'ticket_price', 'reservation_fee', 'total_price',
-            'face_verified', 'verified_at', 'image_url'
+            'face_verified', 'verified_at', 'image_url',
+            'is_deleted'
         ]
 
     def get_event_name(self, obj):
@@ -229,6 +251,22 @@ class TicketDetailSerializer(serializers.ModelSerializer):
             return None
 
 class TicketListSerializer(serializers.ModelSerializer):
+    """
+    티켓 전체보기(목록) Serializer
+    응답 예시:
+    {
+        "id": 1,
+        "event_name": "콘서트명",
+        "event_date": "2024-08-01",
+        "event_start_time": "19:00",
+        "event_location": "서울",
+        "seat_rank": "A",
+        "seat_number": "12",
+        "ticket_status": "booked",
+        "image_url": "http://...",
+        "is_deleted": false
+    }
+    """
     image_url = serializers.SerializerMethodField()
     event_name = serializers.SerializerMethodField()
     event_date = serializers.SerializerMethodField()
@@ -242,7 +280,8 @@ class TicketListSerializer(serializers.ModelSerializer):
         model = Ticket
         fields = [
             'id', 'event_name', 'event_date', 'event_start_time', 'event_location',
-            'seat_rank', 'seat_number', 'ticket_status', 'image_url'
+            'seat_rank', 'seat_number', 'ticket_status', 'image_url',
+            'is_deleted'
         ]
 
     def get_image_url(self, obj):
