@@ -26,8 +26,8 @@ urlpatterns = [
     path('api/v1/tickets/<int:purchase_id>/share/', ShareTicketsView.as_view(), name='share-tickets'),
 
     path('api/v1/tickets/', MyTicketListView.as_view(), name='myticket-list'),
-    path('api/vi/tickets/<int:ticket_id>/', TicketDetailView.as_view(), name='ticket-detail'),
-    path('api/vi/tickets/<int:ticket_id>/', TicketCancelView.as_view(), name='ticket-cancel'),
+    path('api/v1/tickets/<int:ticket_id>/', TicketDetailView.as_view(), name='ticket-detail'),
+    path('api/v1/tickets/<int:ticket_id>/', TicketCancelView.as_view(), name='ticket-cancel'),
 
     path('api/v1/tickets/<int:ticket_id>/qr', TicketQRView.as_view(), name='ticket-qr'),
     path('api/v1/user/signup/', UserSignupView.as_view(), name='signup'),

@@ -229,6 +229,7 @@ class TicketDetailSerializer(serializers.ModelSerializer):
             return None
 
 class TicketListSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
     event_name = serializers.SerializerMethodField()
     event_date = serializers.SerializerMethodField()
     event_start_time = serializers.SerializerMethodField()
@@ -240,11 +241,15 @@ class TicketListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ticket
         fields = [
-            'id',
-            'event_name', 'event_date', 'event_start_time', 'event_location',
-            'seat_rank', 'seat_number', 'ticket_status'
+            'id', 'event_name', 'event_date', 'event_start_time', 'event_location',
+            'seat_rank', 'seat_number', 'ticket_status', 'image_url'
         ]
 
+    def get_image_url(self, obj):
+        try:
+            return obj.seat.zone.event_time.event.image_url
+        except Exception:
+            return None
     def get_event_name(self, obj):
         return obj.seat.zone.event_time.event.name
     def get_event_date(self, obj):
