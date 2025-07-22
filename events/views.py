@@ -321,6 +321,7 @@ class EventDetailAPIView(APIView):
             schedules = EventTime.objects.filter(event=event).order_by('event_date', 'start_time')
             schedule_list = [
                 {
+                    "event_time_id": et.id,
                     "date": et.event_date.isoformat(),
                     "start_time": et.start_time.strftime("%H:%M"),
                     "end_time": et.end_time.strftime("%H:%M")
