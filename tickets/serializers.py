@@ -195,12 +195,12 @@ class TicketDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ticket
         fields = [
-            'id', 'event_name', 'event_date', 'event_time', 'event_location',
+            'id',
+            'event_name', 'event_date', 'event_time', 'event_location',
             'seat_rank', 'seat_number', 'reservation_number',
             'ticket_price', 'reservation_fee', 'total_price',
             'face_verified', 'verified_at', 'image_url'
         ]
-        extra_kwargs = {'id': {'source': 'ticket_id'}}
 
     def get_event_name(self, obj):
         return obj.seat.zone.event_time.event.name

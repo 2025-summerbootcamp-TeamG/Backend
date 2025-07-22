@@ -23,8 +23,6 @@ from django.http import JsonResponse
 import qrcode
 from io import BytesIO
 
-## 도커 컨테이너 제대로 빌드되는지 확인33333
-
 ###############################################
 # 얼굴 관련 API 모음 (등록/인증/상태조회/DB/AWS)
 ###############################################
