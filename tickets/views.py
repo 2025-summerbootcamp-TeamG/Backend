@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from .models import Ticket
-from .serializers import TicketSerializer
+from .serializers import TicketDetailSerializer, TicketListSerializer
 from django.shortcuts import get_object_or_404
 from django.db import connection
 from django.db import transaction
@@ -489,12 +489,11 @@ class MyTicketListView(APIView):
     @extend_schema(
         summary="나의 티켓 목록 조회",
         description="JWT 인증된 유저의 모든 티켓 목록을 반환합니다.",
-        responses=TicketSerializer(many=True)
+        # responses는 그대로 두어도 무방
     )
     def get(self, request):
-        user_id = request.user.id
-        tickets = Ticket.objects.filter(user_id=user_id)
-        serializer = TicketSerializer(tickets, many=True)
+        tickets = Ticket.objects.filter(user_id=request.user.id)
+        serializer = TicketListSerializer(tickets, many=True)
         return Response(serializer.data)
 
 @extend_schema(tags=["tickets"])
@@ -508,34 +507,11 @@ class TicketDetailView(APIView):
         parameters=[
             OpenApiParameter(name='ticket_id', description='티켓 ID', required=True, type=int, location=OpenApiParameter.PATH),
         ],
-        responses={
-            200: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description="성공",
-                examples=[
-                    OpenApiExample(
-                        "Success",
-                        value={"id": 1, "user_id": 2, "ticket_status": "booked", "seat": 10, "purchase": 5, "face_verified": True, "verified_at": "2024-07-16 12:00:00", "created_at": "2024-07-16T12:00:00Z", "updated_at": "2024-07-16T12:00:00Z", "is_deleted": False},
-                        status_codes=["200"]
-                    )
-                ]
-            ),
-            404: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description="티켓 없음",
-                examples=[
-                    OpenApiExample(
-                        "NotFound",
-                        value={"detail": "Not found."},
-                        status_codes=["404"]
-                    )
-                ]
-            ),
-        }
+        # responses는 그대로 두어도 무방
     )
     def get(self, request, ticket_id):
         ticket = get_object_or_404(Ticket, id=ticket_id, user_id=request.user.id)
-        serializer = TicketSerializer(ticket)
+        serializer = TicketDetailSerializer(ticket)
         return Response(serializer.data)
 
 @extend_schema(tags=["tickets"])
