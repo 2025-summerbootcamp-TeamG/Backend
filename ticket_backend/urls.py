@@ -4,6 +4,7 @@ from events.views import EventListAPIView, EventDetailAPIView, EventSeatsAPIView
 from tickets.views import FaceRegisterAPIView, TicketFaceAuthAPIView, face_register_page, MyTicketListView, AWSFaceRecognitionRegister, AWSFaceRecognitionAuth
 from tickets.views import FaceListAPIView, FaceDeleteAPIView, ShareTicketsView, TicketQRView, checkin_ticket_view, TicketDetailView, TicketCancelView, FaceGuideCheckAPIView
 from user.views import UserSignupView, UserLoginView, UserLogoutView
+from tickets.views import TicketCertificationAPIView
 
 from django.conf import settings
 from django.conf.urls.static import static

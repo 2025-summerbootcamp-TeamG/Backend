@@ -984,6 +984,7 @@ class FaceGuideCheckAPIView(APIView):
 @extend_schema(
     summary="티켓 얼굴 인증 완료 → ticket_status를 checked_in으로 변경",
     description="얼굴 인증이 완료된 티켓의 상태를 checked_in으로 변경합니다. (본인 소유 티켓만 가능)",
+    tags=["tickets"],
     parameters=[
         OpenApiParameter(
             name="ticket_id",
