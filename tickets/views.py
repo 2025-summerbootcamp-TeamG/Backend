@@ -553,6 +553,11 @@ class TicketCancelView(APIView):
         ticket.ticket_status = 'canceled'
         ticket.save()
 
+        # 좌석 상태를 'available'로 변경
+        seat = ticket.seat
+        seat.seat_status = 'available'
+        seat.save()
+
         # purchase_id가 있으면 purchase_status도 '취소'로 변경
         purchase_id = getattr(ticket, 'purchase_id', None)
         if purchase_id:
