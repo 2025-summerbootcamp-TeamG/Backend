@@ -552,6 +552,7 @@ class TicketCancelView(APIView):
     def patch(self, request, ticket_id):
         ticket = get_object_or_404(Ticket, id=ticket_id, user_id=request.user.id)
         ticket.ticket_status = 'canceled'
+        ticket.is_deleted = True
         ticket.save()
 
         # 좌석 상태를 'available'로 변경
