@@ -14,8 +14,6 @@ from drf_spectacular.views import (
     SpectacularRedocView,
 )
 
-
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/events/view/', EventListAPIView.as_view(), name='event-list'),
@@ -45,6 +43,8 @@ urlpatterns = [
     path('api/v1/tickets/face-list/', FaceListAPIView.as_view(), name='face-list'),
     path('api/v1/tickets/face-delete/', FaceDeleteAPIView.as_view(), name='face-delete'),
     path('api/v1/face/check/', FaceGuideCheckAPIView.as_view(), name='face-guide-check'),
+
+    path('api/v1/ticket/<int:ticket_id>/certification/', TicketCertificationAPIView.as_view(), name='ticket-certification'),
 
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
