@@ -318,36 +318,7 @@ class EventDetailAPIView(APIView):
             event = Event.objects.get(pk=event_id, is_deleted=False)
             event.view_count += 1
             event.save(update_fields=["view_count"])
-            schedules = EventTime.objects.filter(event=event).order_by('event_date', 'start_time')
-            schedule_list = [
-                {
-                    "event_time_id": et.id,
-                    "date": et.event_date.isoformat(),
-                    "start_time": et.start_time.strftime("%H:%M"),
-                    "end_time": et.end_time.strftime("%H:%M")
-                }
-                for et in schedules
-            ]
-            prices = []
-            for et in schedules:
-                prices += [z.price for z in et.zone_set.all()]
-            min_price = min(prices) if prices else 0
-            max_price = max(prices) if prices else 0
-
-            data = {
-                "id": event.id,
-                "name": event.name,
-                "artist": event.artist,
-                "date": schedules[0].event_date.isoformat() if schedules else None,
-                "location": event.location,
-                "price": f"₩{min_price:,} ~ ₩{max_price:,}" if min_price != max_price else f"₩{min_price:,}",
-                "thumbnail": event.image_url,
-                "description": event.description,
-                "schedules": schedule_list,
-                "max_reserve": event.max_reserve,
-                "view_count": event.view_count,
-            }
-            serializer = EventDetailResponseSerializer(data)
+            serializer = EventDetailResponseSerializer(event)
             return Response(serializer.data)
         except Event.DoesNotExist:
             return Response({"message": "행사를 찾을 수 없습니다."}, status=404)
