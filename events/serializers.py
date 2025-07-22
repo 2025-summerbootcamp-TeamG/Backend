@@ -63,19 +63,59 @@ class EventScheduleSerializer(serializers.Serializer):
     date = serializers.CharField()
     start_time = serializers.CharField()
     end_time = serializers.CharField()
-    
-class EventDetailResponseSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    name = serializers.CharField()
-    artist = serializers.CharField()
-    date = serializers.CharField(allow_null=True)
-    location = serializers.CharField()
-    price = serializers.CharField()
-    thumbnail = serializers.CharField()
-    description = serializers.CharField()
-    schedules = serializers.ListField(child=serializers.DictField())
+    zone_ids = serializers.ListField(child=serializers.IntegerField(), read_only=True)
+
+    def to_representation(self, instance):
+        # instance는 EventTime 인스턴스여야 함
+        from .models import Zone
+        data = {
+            'event_time_id': instance.id,
+            'date': instance.event_date.isoformat() if hasattr(instance, 'event_date') else '',
+            'start_time': instance.start_time.strftime("%H:%M") if hasattr(instance, 'start_time') else '',
+            'end_time': instance.end_time.strftime("%H:%M") if hasattr(instance, 'end_time') else '',
+            'zone_ids': [zone.id for zone in Zone.objects.filter(event_time=instance)]
+        }
+        return data
+
+class EventDetailResponseSerializer(serializers.ModelSerializer):
+    date = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
+    schedules = serializers.SerializerMethodField()
+    thumbnail = serializers.CharField(source='image_url')
     max_reserve = serializers.CharField()
-    view_count = serializers.IntegerField()
+
+    class Meta:
+        model = Event
+        fields = [
+            'id', 'name', 'artist', 'date', 'location', 'price', 'thumbnail',
+            'description', 'schedules', 'max_reserve', 'view_count'
+        ]
+
+    def get_date(self, obj):
+        if not hasattr(obj, 'eventtime_set'):
+            return None
+        first_time = obj.eventtime_set.order_by('event_date').first()
+        return first_time.event_date.isoformat() if first_time else None
+
+    def get_schedules(self, obj):
+        if not hasattr(obj, 'eventtime_set'):
+            return []
+        event_times = obj.eventtime_set.order_by('event_date', 'start_time')
+        return EventScheduleSerializer(event_times, many=True).data
+
+    def get_price(self, obj):
+        if not hasattr(obj, 'eventtime_set'):
+            return "₩0"
+        prices = []
+        for et in obj.eventtime_set.all():
+            prices += [z.price for z in et.zone_set.all()]
+        if not prices:
+            return "₩0"
+        min_price = min(prices)
+        max_price = max(prices)
+        if min_price == max_price:
+            return f"₩{min_price:,}"
+        return f"₩{min_price:,} ~ ₩{max_price:,}"
 
 class EventSeatsDataSerializer(serializers.Serializer):
     schedules = EventScheduleSerializer(many=True)
