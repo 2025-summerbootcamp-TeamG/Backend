@@ -489,7 +489,7 @@ class MyTicketListView(APIView):
     @extend_schema(
         summary="나의 티켓 목록 조회",
         description="JWT 인증된 유저의 모든 티켓 목록을 반환합니다.",
-        # responses는 그대로 두어도 무방
+        responses=TicketListSerializer(many=True)  # 응답 스키마 명시
     )
     def get(self, request):
         tickets = Ticket.objects.filter(user_id=request.user.id)
@@ -507,7 +507,7 @@ class TicketDetailView(APIView):
         parameters=[
             OpenApiParameter(name='ticket_id', description='티켓 ID', required=True, type=int, location=OpenApiParameter.PATH),
         ],
-        # responses는 그대로 두어도 무방
+        responses=TicketDetailSerializer  # 응답 스키마 명시
     )
     def get(self, request, ticket_id):
         ticket = get_object_or_404(Ticket, id=ticket_id, user_id=request.user.id)
