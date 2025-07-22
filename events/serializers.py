@@ -59,6 +59,7 @@ class EventListResponseSerializer(serializers.Serializer):
 
 
 class EventScheduleSerializer(serializers.Serializer):
+    event_time_id = serializers.IntegerField()
     date = serializers.CharField()
     start_time = serializers.CharField()
     end_time = serializers.CharField()
