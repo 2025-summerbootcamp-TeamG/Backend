@@ -389,7 +389,8 @@ class EventSeatsAPIView(APIView):
                     "price": zone.price,
                     "seat_status": seat.seat_status,
                     "event_time_id": zone.event_time.id,
-                    "available_count": zone.available_count  # 잔여좌석
+                    "available_count": zone.available_count,  # 잔여좌석
+                    "date": zone.event_time.event_date.isoformat(),
                 })
             return Response({
                 "statusCode": 200,

@@ -87,6 +87,7 @@ class SeatInfoSerializer(serializers.Serializer):
     seat_status = serializers.CharField()
     event_time_id = serializers.IntegerField()
     available_count = serializers.IntegerField()
+    date = serializers.CharField()
 
 class EventSeatsResponseSerializer(serializers.Serializer):
     statusCode = serializers.IntegerField()
