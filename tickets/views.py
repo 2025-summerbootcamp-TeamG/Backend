@@ -22,6 +22,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiRespon
 from django.http import JsonResponse
 import qrcode
 from io import BytesIO
+from .serializers import TicketCertificationSerializer
 
 ###############################################
 # 얼굴 관련 API 모음 (등록/인증/상태조회/DB/AWS)
@@ -984,4 +985,103 @@ class FaceGuideCheckAPIView(APIView):
             "is_in_guide": is_in_guide,
             "message": "얼굴이 가이드라인 안에 있습니다." if is_in_guide else "가이드라인 안에 얼굴이 없습니다."
         })
-        
+
+@extend_schema(
+    summary="티켓 얼굴 인증 완료 → ticket_status를 checked_in으로 변경",
+    description="얼굴 인증이 완료된 티켓의 상태를 checked_in으로 변경합니다. (본인 소유 티켓만 가능)",
+    tags=["tickets"],
+    parameters=[
+        OpenApiParameter(
+            name="ticket_id",
+            description="상태를 변경할 티켓의 ID",
+            required=True,
+            type=int,
+            location=OpenApiParameter.PATH,
+        ),
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=TicketCertificationSerializer,
+            description="상태 변경 성공",
+            examples=[
+                OpenApiExample(
+                    "Success",
+                    value={
+                        "message": "티켓이 checked_in(입장 완료) 상태로 변경되었습니다.",
+                        "ticket": {
+                            "id": 1,
+                            "ticket_status": "checked_in"
+                        }
+                    },
+                    status_codes=["200"]
+                )
+            ]
+        ),
+        400: OpenApiResponse(
+            description="이미 입장 처리된 티켓 등",
+            examples=[
+                OpenApiExample(
+                    "Already Checked In",
+                    value={"message": "이미 입장 처리된 티켓입니다."},
+                    status_codes=["400"]
+                )
+            ]
+        ),
+        403: OpenApiResponse(
+            description="권한 없음",
+            examples=[
+                OpenApiExample(
+                    "Forbidden",
+                    value={"message": "해당 티켓에 대한 권한이 없습니다."},
+                    status_codes=["403"]
+                )
+            ]
+        ),
+        404: OpenApiResponse(
+            description="티켓 없음",
+            examples=[
+                OpenApiExample(
+                    "Not Found",
+                    value={"message": "티켓을 찾을 수 없습니다."},
+                    status_codes=["404"]
+                )
+            ]
+        ),
+    }
+)
+class TicketCertificationAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, ticket_id):
+        try:
+            ticket = Ticket.objects.get(id=ticket_id)
+        except Ticket.DoesNotExist:
+            return Response(
+                {"message": "티켓을 찾을 수 없습니다."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        # 본인 소유 티켓인지 확인
+        if ticket.user_id != request.user.id:
+            return Response(
+                {"message": "해당 티켓에 대한 권한이 없습니다."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        # 이미 checked_in이면 중복 처리 방지
+        if ticket.ticket_status == "checked_in":
+            return Response(
+                {"message": "이미 입장 처리된 티켓입니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        # 시리얼라이저로 상태 변경
+        serializer = TicketCertificationSerializer(ticket, data={}, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {
+                    "message": "티켓이 checked_in(입장 완료) 상태로 변경되었습니다.",
+                    "ticket": serializer.data
+                },
+                status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 

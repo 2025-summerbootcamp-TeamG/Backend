@@ -262,3 +262,15 @@ class TicketListSerializer(serializers.ModelSerializer):
         return obj.seat.zone.rank
     def get_seat_number(self, obj):
         return obj.seat.seat_number
+
+class TicketCertificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ticket
+        fields = ['id', 'ticket_status']
+        read_only_fields = ['id']
+
+    def update(self, instance, validated_data):
+        # ticket_status를 checked_in으로 강제 변경
+        instance.ticket_status = 'checked_in'
+        instance.save()
+        return instance
