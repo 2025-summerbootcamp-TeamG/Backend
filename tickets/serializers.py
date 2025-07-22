@@ -229,33 +229,31 @@ class TicketDetailSerializer(serializers.ModelSerializer):
             return None
 
 class TicketListSerializer(serializers.ModelSerializer):
+    ticket_id = serializers.IntegerField(source='id')
     event_name = serializers.SerializerMethodField()
     event_date = serializers.SerializerMethodField()
-    event_time = serializers.SerializerMethodField()
+    event_start_time = serializers.SerializerMethodField()
     event_location = serializers.SerializerMethodField()
-    seat_info = serializers.SerializerMethodField()
-    image_url = serializers.SerializerMethodField()
+    seat_rank = serializers.SerializerMethodField()
+    seat_number = serializers.SerializerMethodField()
+    ticket_status = serializers.CharField()
 
     class Meta:
         model = Ticket
         fields = [
-            'id', 'event_name', 'event_date', 'event_time', 'event_location',
-            'seat_info', 'face_verified', 'image_url'
+            'ticket_id', 'event_name', 'event_date', 'event_start_time', 'event_location',
+            'seat_rank', 'seat_number', 'ticket_status'
         ]
-        extra_kwargs = {'id': {'source': 'ticket_id'}}
 
     def get_event_name(self, obj):
         return obj.seat.zone.event_time.event.name
     def get_event_date(self, obj):
         return obj.seat.zone.event_time.event_date.strftime('%Y-%m-%d')
-    def get_event_time(self, obj):
+    def get_event_start_time(self, obj):
         return obj.seat.zone.event_time.start_time.strftime('%H:%M')
     def get_event_location(self, obj):
         return obj.seat.zone.event_time.event.location
-    def get_seat_info(self, obj):
-        return f"{obj.seat.zone.rank} {obj.seat.seat_number}"
-    def get_image_url(self, obj):
-        try:
-            return obj.seat.zone.event_time.event.image_url
-        except Exception:
-            return None
+    def get_seat_rank(self, obj):
+        return obj.seat.zone.rank
+    def get_seat_number(self, obj):
+        return obj.seat.seat_number
