@@ -190,7 +190,7 @@ class TicketDetailSerializer(serializers.ModelSerializer):
     reservation_fee = serializers.SerializerMethodField()
     total_price = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
-    verified_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M", source="verified_at", allow_null=True)
+    verified_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M", allow_null=True)
 
     class Meta:
         model = Ticket
