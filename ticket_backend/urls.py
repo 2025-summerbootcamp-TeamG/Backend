@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from events.views import EventListAPIView, EventDetailAPIView, EventSeatsAPIView, BuyTicketsView, PayTicketView
 from tickets.views import FaceRegisterAPIView, TicketFaceAuthAPIView, face_register_page, MyTicketListView, AWSFaceRecognitionRegister, AWSFaceRecognitionAuth
-from tickets.views import FaceListAPIView, FaceDeleteAPIView, ShareTicketsView, TicketQRView, checkin_ticket_view, TicketDetailView, TicketCancelView, FaceGuideCheckAPIView
+from tickets.views import FaceListAPIView, FaceDeleteAPIView, ShareTicketsView, TicketQRView, checkin_ticket_view, TicketDetailView, FaceGuideCheckAPIView
 from user.views import UserSignupView, UserLoginView, UserLogoutView
 from tickets.views import TicketCertificationAPIView
 
@@ -26,7 +26,6 @@ urlpatterns = [
 
     path('api/v1/tickets/', MyTicketListView.as_view(), name='myticket-list'),
     path('api/v1/tickets/<int:ticket_id>/', TicketDetailView.as_view(), name='ticket-detail'),
-    path('api/v1/tickets/<int:ticket_id>/', TicketCancelView.as_view(), name='ticket-cancel'),
 
     path('api/v1/tickets/<int:ticket_id>/qr', TicketQRView.as_view(), name='ticket-qr'),
     path('api/v1/user/signup/', UserSignupView.as_view(), name='signup'),
