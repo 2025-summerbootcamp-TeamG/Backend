@@ -78,14 +78,11 @@
       <p><strong>공연시간:</strong> {{ event_time }}</p>
       <p><strong>좌석 등급:</strong> {{ zone }}</p>
       <p><strong>좌석 번호:</strong> {{ seat_number }}</p>
-      <div class="ticket-number">
-        티켓 번호: {{ ticket.ticket_number }}
-      </div>
     </div>
 
     <!-- 오른쪽 썸네일 -->
     <div class="ticket-thumbnail">
-      <img src="{{ event.image_url }}" alt="공연 썸네일">
+      <img src="{{ event.thumbnail }}" alt="공연 썸네일">
     </div>
   </div>
 </body>
