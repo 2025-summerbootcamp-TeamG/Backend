@@ -248,7 +248,7 @@ class FaceRegisterAPIView(APIView):
 
     @extend_schema(
         summary="티켓 얼굴 등록 상태 변경 (DB 필드만)",
-        description="티켓의 face_verified, verified_at 필드만 DB에 저장합니다. AWS 등 외부 연동 없음.",
+        description="티켓의 face_verified 필드만 DB에 저장합니다. AWS 등 외부 연동 없음.",
         request={
             'application/json': {
                 'type': 'object',
@@ -264,7 +264,7 @@ class FaceRegisterAPIView(APIView):
         responses={
             200: OpenApiResponse(
                 response=OpenApiTypes.OBJECT,
-                description="성공: DB에 face_verified, verified_at 저장",
+                description="성공: DB에 face_verified 저장",
                 examples=[
                     OpenApiExample(
                         "Success",
@@ -275,7 +275,6 @@ class FaceRegisterAPIView(APIView):
                                 "ticket_id": 1,
                                 "user_id": 2,
                                 "face_verified": True,
-                                "verified_at": "2024-07-16 12:00:00"
                             }
                         },
                         status_codes=["200"]
@@ -351,9 +350,8 @@ class FaceRegisterAPIView(APIView):
             face_verified = face_verified.lower() == 'true'
         try:
             ticket.face_verified = face_verified
-            ticket.verified_at = timezone.now() if face_verified else None
-            ticket.save()
-            verified_at_str = timezone.localtime(ticket.verified_at).strftime('%Y-%m-%d %H:%M:%S') if ticket.verified_at else None
+            # verified_at 필드 자체를 건드리지 않음
+            ticket.save(update_fields=["face_verified"])
             return Response(
                 {
                     "code": 200,
@@ -362,7 +360,6 @@ class FaceRegisterAPIView(APIView):
                         "ticket_id": ticket.id,
                         "user_id": ticket.user_id,
                         "face_verified": ticket.face_verified,
-                        "verified_at": verified_at_str
                     }
                 },
                 status=status.HTTP_200_OK
