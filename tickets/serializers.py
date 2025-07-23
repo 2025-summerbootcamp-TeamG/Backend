@@ -5,6 +5,7 @@ from user.serializers import UserSignupSerializer
 from .models import Purchase
 from events.models import Seat, Zone, EventTime, Event
 from events.serializers import EventSerializer, EventTimeSerializer, ZoneSerializer
+from django.utils import timezone
 
 class EventNestedSerializer(serializers.ModelSerializer):
     class Meta:
@@ -197,9 +198,12 @@ class TicketDetailSerializer(serializers.ModelSerializer):
         "face_verified": false,
         "verified_at": null,
         "image_url": "http://...",
-        "is_deleted": false
+        "checked_in_at": "2024-08-10 18:45",
+        "is_deleted": false,
+        "ticket_status": "checked_in"
     }
     """
+    checked_in_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M", allow_null=True)
     event_name = serializers.SerializerMethodField()
     event_date = serializers.SerializerMethodField()
     event_time = serializers.SerializerMethodField()
@@ -212,6 +216,7 @@ class TicketDetailSerializer(serializers.ModelSerializer):
     total_price = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
     verified_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M", allow_null=True)
+    ticket_status = serializers.CharField()
 
     class Meta:
         model = Ticket
@@ -221,7 +226,9 @@ class TicketDetailSerializer(serializers.ModelSerializer):
             'seat_rank', 'seat_number', 'reservation_number',
             'ticket_price', 'reservation_fee', 'total_price',
             'face_verified', 'verified_at', 'image_url',
-            'is_deleted'
+            'checked_in_at',
+            'is_deleted',
+            'ticket_status'
         ]
 
     def get_event_name(self, obj):
@@ -303,13 +310,23 @@ class TicketListSerializer(serializers.ModelSerializer):
         return obj.seat.seat_number
 
 class TicketCertificationSerializer(serializers.ModelSerializer):
+    """
+    티켓 상태 변경(입장 완료) 응답 예시:
+    {
+        "id": 1,
+        "ticket_status": "checked_in",
+        "checked_in_at": "2024-08-10 18:45"
+    }
+    """
+    checked_in_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M", allow_null=True)
     class Meta:
         model = Ticket
-        fields = ['id', 'ticket_status']
+        fields = ['id', 'ticket_status', 'checked_in_at']
         read_only_fields = ['id']
 
     def update(self, instance, validated_data):
         # ticket_status를 checked_in으로 강제 변경
         instance.ticket_status = 'checked_in'
+        instance.checked_in_at = timezone.now()
         instance.save()
         return instance
