@@ -351,8 +351,9 @@ class FaceRegisterAPIView(APIView):
             face_verified = face_verified.lower() == 'true'
         try:
             ticket.face_verified = face_verified
+            ticket.ticket_status = 'verified'  # 얼굴 등록 시 상태 변경
             # verified_at 필드 자체를 건드리지 않음
-            ticket.save(update_fields=["face_verified"])
+            ticket.save(update_fields=["face_verified", "ticket_status"])
             return Response(
                 {
                     "code": 200,
@@ -361,6 +362,7 @@ class FaceRegisterAPIView(APIView):
                         "ticket_id": ticket.id,
                         "user_id": ticket.user_id,
                         "face_verified": ticket.face_verified,
+                        "ticket_status": ticket.ticket_status,
                     }
                 },
                 status=status.HTTP_200_OK
