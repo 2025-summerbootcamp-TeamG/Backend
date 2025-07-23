@@ -1,40 +1,92 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>티켓 정보 확인</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 30px;
-        }
-        .ticket-box {
-            border: 2px solid #333;
-            padding: 20px;
-            border-radius: 12px;
-            max-width: 400px;
-            margin: 0 auto;
-        }
-        .ticket-box h2 {
-            text-align: center;
-        }
-        .ticket-info p {
-            font-size: 18px;
-            margin: 10px 0;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>티켓 정보 확인</title>
+  <style>
+    body {
+      font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+      background-color: #f8f8f8;
+      padding: 40px 20px;
+    }
+
+    .ticket-container {
+      width: 700px;
+      height: 320px; /* 충분한 높이 */
+      margin: 0 auto;
+      display: flex;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      border: 2px solid #ddd;
+    }
+
+    .ticket-info {
+      width: 60%;
+      padding: 30px 24px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .ticket-info h2 {
+      font-size: 24px;
+      margin-bottom: 12px;
+      color: #222;
+    }
+
+    .ticket-info p {
+      font-size: 17px;
+      margin: 8px 0;
+    }
+
+    .ticket-info strong {
+      color: #444;
+    }
+
+    .ticket-number {
+      margin-top: 14px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .ticket-thumbnail {
+      width: 40%;
+      background-color: #f1f1f1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ticket-thumbnail img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain; /* 전체 이미지 보이게 */
+      display: block;
+    }
+  </style>
 </head>
 <body>
-    <div class="ticket-box">
-        <h2>🎟️ 입장 티켓</h2>
-        <div class="ticket-info">
-            <p><strong>이름:</strong> {{ username }}</p>
-            <p><strong>공연명:</strong> {{ event_name }}</p>
-            <p><strong>공연일:</strong> {{ event_date }}</p>
-            <p><strong>공연시간:</strong> {{ event_time }}</p>
-            <p><strong>좌석 등급:</strong> {{ zone }}</p>
-            <p><strong>좌석 번호:</strong> {{ seat_number }}</p>
-        </div>
+  <div class="ticket-container">
+    <!-- 왼쪽 티켓 정보 -->
+    <div class="ticket-info">
+      <h2>{{ event.name }}</h2>
+      <p><strong>이름:</strong> {{ username }}</p>
+      <p><strong>공연일:</strong> {{ event_date }}</p>
+      <p><strong>공연시간:</strong> {{ event_time }}</p>
+      <p><strong>좌석 등급:</strong> {{ zone }}</p>
+      <p><strong>좌석 번호:</strong> {{ seat_number }}</p>
+      <div class="ticket-number">
+        티켓 번호: {{ ticket.ticket_number }}
+      </div>
     </div>
+
+    <!-- 오른쪽 썸네일 -->
+    <div class="ticket-thumbnail">
+      <img src="{{ event.image_url }}" alt="공연 썸네일">
+    </div>
+  </div>
 </body>
 </html>
