@@ -495,6 +495,7 @@ class MyTicketListView(APIView):
         serializer = TicketListSerializer(tickets, many=True)
         return Response(serializer.data)
 
+@extend_schema(tags=["tickets"])
 class TicketDetailView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -870,8 +871,9 @@ class TicketQRView(APIView):
         except Ticket.DoesNotExist:
             return JsonResponse({'error': '티켓이 존재하지 않거나 접근 권한이 없습니다.'}, status=404)
 
-        #    
-        qr_url = f"http://52.79.184.120:8000/api/v1/tickets/{ticket.id}/checkin"
+
+        api_base_url=os.environ.get("API_BASE_URL")
+        qr_url = f"{api_base_url}/api/v1/tickets/{ticket.id}/checkin"
 
         qr_img = qrcode.make(qr_url)
         buffer = BytesIO()
