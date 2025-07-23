@@ -891,13 +891,16 @@ def checkin_ticket_view(request, ticket_id):
     except Ticket.DoesNotExist:
         return render(request, 'invalid_ticket.html', status=404)
 
+    image_url = ticket.seat.zone.event_time.event.image_url
+
     context = {
         'username': ticket.user.name,
         'event_date': ticket.seat.zone.event_time.event_date.strftime("%Y-%m-%d"),
         'seat_number': ticket.seat.seat_number,
-        'zone': ticket.seat.zone.rank,
+        'seat_rank': ticket.seat.zone.rank,
         'event_time': ticket.seat.zone.event_time.start_time.strftime("%H:%M"),
         'event_name': ticket.seat.zone.event_time.event.name,
+        'image_url': image_url,
     }
 
     return render(request, 'checkin_ticket.html', context)
