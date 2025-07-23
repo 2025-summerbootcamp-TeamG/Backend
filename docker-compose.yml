@@ -36,7 +36,8 @@ services:
       - "6379:6379"
 
   celery:
-    build: .
+    image: ${DOCKERHUB_USERNAME}/ticket-backend:dev-latest
+    #build: .
     command: celery -A ticket_backend worker --loglevel=info
     depends_on:
       - redis
