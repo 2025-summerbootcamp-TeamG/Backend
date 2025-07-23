@@ -198,12 +198,10 @@ class TicketDetailSerializer(serializers.ModelSerializer):
         "face_verified": false,
         "verified_at": null,
         "image_url": "http://...",
-        "checked_in_at": "2024-08-10 18:45",
         "is_deleted": false,
         "ticket_status": "checked_in"
     }
     """
-    checked_in_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M", allow_null=True)
     event_name = serializers.SerializerMethodField()
     event_date = serializers.SerializerMethodField()
     event_time = serializers.SerializerMethodField()
@@ -226,7 +224,6 @@ class TicketDetailSerializer(serializers.ModelSerializer):
             'seat_rank', 'seat_number', 'reservation_number',
             'ticket_price', 'reservation_fee', 'total_price',
             'face_verified', 'verified_at', 'image_url',
-            'checked_in_at',
             'is_deleted',
             'ticket_status'
         ]
@@ -315,18 +312,18 @@ class TicketCertificationSerializer(serializers.ModelSerializer):
     {
         "id": 1,
         "ticket_status": "checked_in",
-        "checked_in_at": "2024-08-10 18:45"
+        "verified_at": "2024-08-10 18:45"
     }
     """
-    checked_in_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M", allow_null=True)
+    verified_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M", allow_null=True)
     class Meta:
         model = Ticket
-        fields = ['id', 'ticket_status', 'checked_in_at']
+        fields = ['id', 'ticket_status', 'verified_at']
         read_only_fields = ['id']
 
     def update(self, instance, validated_data):
         # ticket_status를 checked_in으로 강제 변경
         instance.ticket_status = 'checked_in'
-        instance.checked_in_at = timezone.now()
+        instance.verified_at = timezone.now()
         instance.save()
         return instance

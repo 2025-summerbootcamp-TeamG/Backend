@@ -27,7 +27,6 @@ class Ticket(models.Model):
     booked_at = models.DateTimeField(null=True, blank=True)
     face_verified = models.BooleanField(default=False)
     verified_at = models.DateTimeField(null=True, blank=True)
-    checked_in_at = models.DateTimeField(null=True, blank=True)  # 입장 완료 시각
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_deleted = models.BooleanField(default=False)
