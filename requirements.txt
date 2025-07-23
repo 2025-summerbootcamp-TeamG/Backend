@@ -13,3 +13,5 @@ requests
 drf-spectacular     # 스웨거 패키지
 drf-spectacular-sidecar
 qrcode
+celery
+redis

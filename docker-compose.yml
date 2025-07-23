@@ -3,12 +3,13 @@ version: "3.9"
 services:
   web:
     image: ${DOCKERHUB_USERNAME}/ticket-backend:dev-latest
+    #build: .
     container_name: django-backend
     command: gunicorn ticket_backend.wsgi:application --bind 0.0.0.0:8000
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app
+    #volumes:
+    #  - .:/app
     env_file:
       - .env
     depends_on:
@@ -28,6 +29,20 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+  
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+
+  celery:
+    build: .
+    command: celery -A ticket_backend worker --loglevel=info
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
 
 volumes:
   mysql_data:

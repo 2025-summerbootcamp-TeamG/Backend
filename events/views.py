@@ -7,6 +7,7 @@ from rest_framework import status
 from .models import Seat  
 from tickets.models import Purchase, Ticket  
 from user.models import User   
+from tickets.tasks import auto_cancel_ticket
 
 
 from rest_framework import viewsets
@@ -116,6 +117,10 @@ class BuyTicketsView(APIView):
             seat.seat_status = 'booked'
             seat.save()
             tickets.append(ticket.id)
+            # 자동취소 Celery 태스크 예약
+            if ticket.ticket_status in ['booked', 'reserved']:
+                print(f"[Django] Celery 태스크 예약: {ticket.id}")
+                auto_cancel_ticket.apply_async((ticket.id,), countdown=60)
 
         return Response({
             'message': 'Tickets successfully created.',
@@ -194,6 +199,13 @@ class PayTicketView(APIView):
         purchase.save()
 
         updated_count = Ticket.objects.filter(purchase_id=int(purchase_id)).update(ticket_status="reserved")
+
+        # 상태변경된 티켓들에 대해 자동취소 Celery 태스크 예약
+        updated_tickets = Ticket.objects.filter(purchase_id=int(purchase_id))
+        for ticket in updated_tickets:
+            if ticket.ticket_status in ['booked', 'reserved']:
+                print(f"[Django] Celery 태스크 예약: {ticket.id}")
+                auto_cancel_ticket.apply_async((ticket.id,), countdown=60)
 
         return Response({'message': '결제가 완료되었습니다.'}, status=status.HTTP_200_OK)
 
