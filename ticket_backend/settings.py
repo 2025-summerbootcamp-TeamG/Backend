@@ -18,6 +18,9 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "insecure-dev-key")  # 실제 �
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 ALLOWED_HOSTS = ["*"]  # 개발 시는 * 허용 / 배포 시 도메인 지정
 
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+
 # 앱 등록
 INSTALLED_APPS = [
     'django.contrib.admin',

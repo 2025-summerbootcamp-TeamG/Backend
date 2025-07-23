@@ -23,6 +23,7 @@ from django.http import JsonResponse
 import qrcode
 from io import BytesIO
 from .serializers import TicketCertificationSerializer
+from tickets.tasks import auto_cancel_ticket
 
 ###############################################
 # 얼굴 관련 API 모음 (등록/인증/상태조회/DB/AWS)
