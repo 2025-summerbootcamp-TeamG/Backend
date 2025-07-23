@@ -12,7 +12,7 @@
 
     .ticket-container {
       width: 700px;
-      height: 320px; /* 충분한 높이 */
+      height: 320px;
       margin: 0 auto;
       display: flex;
       background-color: #fff;
@@ -63,7 +63,7 @@
     .ticket-thumbnail img {
       max-width: 100%;
       max-height: 100%;
-      object-fit: contain; /* 전체 이미지 보이게 */
+      object-fit: contain;
       display: block;
     }
   </style>
@@ -72,12 +72,16 @@
   <div class="ticket-container">
     <!-- 왼쪽 티켓 정보 -->
     <div class="ticket-info">
-      <h2>{{ event.name }}</h2>
+      <h2>🎟️ 입장 티켓</h2>
+      <p><strong>공연명:</strong> {{ event_name }}</p>
       <p><strong>이름:</strong> {{ username }}</p>
       <p><strong>공연일:</strong> {{ event_date }}</p>
       <p><strong>공연시간:</strong> {{ event_time }}</p>
-      <p><strong>좌석 등급:</strong> {{ zone }}</p>
+      <p><strong>좌석 등급:</strong> {{ seat_rank }}</p>
       <p><strong>좌석 번호:</strong> {{ seat_number }}</p>
+      <div class="ticket-number">
+        티켓 번호: {{ reservation_number }}
+      </div>
     </div>
 
     <!-- 오른쪽 썸네일 -->
