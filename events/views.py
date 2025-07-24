@@ -120,7 +120,7 @@ class BuyTicketsView(APIView):
             # 자동취소 Celery 태스크 예약
             if ticket.ticket_status in ['booked', 'reserved']:
                 print(f"[Django] Celery 태스크 예약: {ticket.id}")
-                auto_cancel_ticket.apply_async((ticket.id,), countdown=60)
+                auto_cancel_ticket.apply_async((ticket.id,), countdown=300)
 
         return Response({
             'message': 'Tickets successfully created.',
@@ -205,7 +205,7 @@ class PayTicketView(APIView):
         for ticket in updated_tickets:
             if ticket.ticket_status in ['booked', 'reserved']:
                 print(f"[Django] Celery 태스크 예약: {ticket.id}")
-                auto_cancel_ticket.apply_async((ticket.id,), countdown=60)
+                auto_cancel_ticket.apply_async((ticket.id,), countdown=300)
 
         return Response({'message': '결제가 완료되었습니다.'}, status=status.HTTP_200_OK)
 
