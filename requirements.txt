@@ -21,3 +21,4 @@ opentelemetry-instrumentation # Django 자동 계측용
 opentelemetry-instrumentation-django
 opentelemetry-exporter-otlp # OTLP exporter (Collector로 보낼 때 필요)  
 prometheus-client #Optional: Prometheus client 직접 사용 시 (예: 커스텀 메트릭 수동 기록)
+opentelemetry-instrumentation-requests

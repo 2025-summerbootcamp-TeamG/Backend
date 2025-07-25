@@ -15,17 +15,19 @@ services:
   web:
     image: ${DOCKERHUB_USERNAME}/ticket-backend:dev-latest
     container_name: django-backend
-    command: gunicorn ticket_backend.wsgi:application --bind 0.0.0.0:8000
+    command: opentelemetry-instrument gunicorn ticket_backend.wsgi:application --bind 0.0.0.0:8000
     ports:
       - "8000:8000"
     env_file:
       - .env
     depends_on:
       - db
+      - otel-collector
     volumes:
       - ./static:/app/static
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=django-backend
 
   db:
     image: mysql:8.0
@@ -43,14 +45,17 @@ services:
 
   redis:
     image: redis
+    container_name: backend-redis-1
     ports:
       - "6379:6379"
 
   celery:
     image: ${DOCKERHUB_USERNAME}/ticket-backend:dev-latest
+    container_name: backend-celery-1
     command: celery -A ticket_backend worker --loglevel=info
     depends_on:
       - redis
+      - db
     env_file:
       - .env
     environment:
