@@ -8,7 +8,6 @@ exporters:
   prometheus:
     endpoint: "0.0.0.0:8888"
   debug:
-    loglevel: debug
 
 processors:
   batch:
