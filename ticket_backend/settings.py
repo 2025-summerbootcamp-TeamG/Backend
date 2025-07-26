@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from dotenv import load_dotenv  # 1️⃣ 환경변수 로딩용 (필요하면 설치: `pip install python-dotenv`)
+from dotenv import load_dotenv  
 from datetime import timedelta
 
 
