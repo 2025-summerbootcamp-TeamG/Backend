@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   nginx:
     image: nginx:latest
@@ -145,3 +143,4 @@ volumes:
   mysql_data:
   grafana-storage:
   tempo-data:
+  loki-data:
