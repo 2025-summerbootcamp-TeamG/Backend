@@ -28,6 +28,9 @@ services:
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=django-backend
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
       - DJANGO_SETTINGS_MODULE=ticket_backend.settings
 
   db:
@@ -116,6 +119,29 @@ services:
     volumes:
       - ./monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml
 
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    ports:
+      - "3200:3200"  # Tempo HTTP API
+      - "4317:4317"  # OTLP gRPC (optional, for direct trace ingest)
+      - "4318:4318"  # OTLP HTTP (optional, for direct trace ingest)
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./monitoring/tempo.yaml:/etc/tempo.yaml
+      - tempo-data:/tmp/tempo
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+
 volumes:
   mysql_data:
   grafana-storage:
+  tempo-data:

@@ -24,10 +24,22 @@ import qrcode
 from io import BytesIO
 from .serializers import TicketCertificationSerializer
 from tickets.tasks import auto_cancel_ticket
+import logging 
+from opentelemetry import trace
 
 ###############################################
 # 얼굴 관련 API 모음 (등록/인증/상태조회/DB/AWS)
 ###############################################
+
+def send_slack_alert(message):
+    webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
+    if not webhook_url:
+        return
+    payload = {"text": message}
+    try:
+        requests.post(webhook_url, json=payload, timeout=5)
+    except Exception as e:
+        print(f"Slack 알림 실패: {e}")
 
 # --- 1. AWS Rekognition 얼굴 등록 ---
 # [POST] /api/v1/tickets/<ticket_id>/aws-register/
@@ -124,6 +136,8 @@ class AWSFaceRecognitionRegister(APIView):
             else:
                 return Response({"message": "얼굴 등록 실패", "response": response}, status=400)
         except Exception as e:
+            logging.error(f"[AWSFaceRecognitionRegister] user_id={request.user.id}, ticket_id={ticket_id}, error={str(e)}")
+            send_slack_alert(f"[얼굴 등록 실패] user_id={request.user.id}, ticket_id={ticket_id}, error={str(e)}")
             return Response({"message": "AWS Rekognition 처리 중 오류", "error": str(e)}, status=500)
 
 # --- 2. AWS Rekognition 얼굴 인증 ---
@@ -235,6 +249,8 @@ class AWSFaceRecognitionAuth(APIView):
                     "Similarity": best['Similarity']
                 }, status=200)
         except Exception as e:
+            logging.error(f"[AWSFaceRecognitionAuth] user_id={request.user.id}, ticket_id={ticket_id}, error={str(e)}")
+            send_slack_alert(f"[얼굴 인증 실패] user_id={request.user.id}, ticket_id={ticket_id}, error={str(e)}")
             return Response({"message": "AWS Rekognition 처리 중 오류", "error": str(e)}, status=500)
 
 # --- 3. DB 기반 얼굴 등록 상태 변경 ---
