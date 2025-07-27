@@ -134,36 +134,17 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
+# (LOGGING 설정이 있다면 아래와 같이 수정)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'formatters': {
-        'standard': {
-            'format': '[%(levelname)s] %(asctime)s %(name)s %(message)s',
-        },
-    },
     'handlers': {
         'console': {
-            'level': 'INFO',
             'class': 'logging.StreamHandler',
-            'formatter': 'standard',
-        },
-        # OTLP handler (OpenTelemetry 로그)
-        'otel': {
-            'level': 'INFO',
-            'class': 'opentelemetry.sdk._logs.handler.OTLPHandler',
-            'endpoint': 'http://otel-collector:4318/v1/logs',
         },
     },
     'root': {
-        'handlers': ['console', 'otel'],
+        'handlers': ['console'],
         'level': 'INFO',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console', 'otel'],
-            'level': 'INFO',
-            'propagate': False,
-        },
     },
 }
