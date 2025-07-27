@@ -140,3 +140,4 @@ volumes:
   grafana-storage:
   tempo-data:
   loki-data:
+  loki-var:
