@@ -131,13 +131,16 @@ services:
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
+    user: root
     volumes:
       - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml
       - loki-data:/loki
+      - loki-wal:/loki/wal
 
 volumes:
   mysql_data:
   grafana-storage:
   tempo-data:
   loki-data:
+  loki-wal:
   loki-var:
