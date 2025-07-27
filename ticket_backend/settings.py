@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv  
 from datetime import timedelta
-
+import logging
 
 DEBUG=True
 
@@ -132,4 +132,38 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API documentation for face ticketing project.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '[%(levelname)s] %(asctime)s %(name)s %(message)s',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'standard',
+        },
+        # OTLP handler (OpenTelemetry 로그)
+        'otel': {
+            'level': 'INFO',
+            'class': 'opentelemetry.sdk._logs.handler.OTLPHandler',
+            'endpoint': 'http://otel-collector:4318/v1/logs',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'otel'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'otel'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
 }
