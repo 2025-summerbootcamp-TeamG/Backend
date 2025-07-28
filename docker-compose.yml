@@ -38,6 +38,16 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+  
+  anti_spoofing_server:
+    build:
+      context: ./anti_spoofing_server
+    container_name: anti_spoofing_server
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./anti_spoofing_server/static/uploads:/app/static/uploads
+
 
   redis:
     image: redis

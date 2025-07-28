@@ -1,0 +1,6 @@
+Flask==2.2.3
+Werkzeug==2.2.3
+numpy==1.24.2
+opencv-python-headless==4.7.0.72
+Pillow==9.4.0
+imutils==0.5.4
