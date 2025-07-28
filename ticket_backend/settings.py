@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv  
 from datetime import timedelta
-import logging
+
 
 DEBUG=True
 
@@ -132,19 +132,4 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API documentation for face ticketing project.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
-}
-
-# (LOGGING 설정이 있다면 아래와 같이 수정)
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
-    },
 }

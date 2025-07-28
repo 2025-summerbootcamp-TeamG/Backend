@@ -24,22 +24,10 @@ import qrcode
 from io import BytesIO
 from .serializers import TicketCertificationSerializer
 from tickets.tasks import auto_cancel_ticket
-import logging 
-from opentelemetry import trace
 
 ###############################################
 # 얼굴 관련 API 모음 (등록/인증/상태조회/DB/AWS)
 ###############################################
-
-def send_slack_alert(message):
-    webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
-    if not webhook_url:
-        return
-    payload = {"text": message}
-    try:
-        requests.post(webhook_url, json=payload, timeout=5)
-    except Exception as e:
-        print(f"Slack 알림 실패: {e}")
 
 # --- 1. AWS Rekognition 얼굴 등록 ---
 # [POST] /api/v1/tickets/<ticket_id>/aws-register/
@@ -95,15 +83,9 @@ class AWSFaceRecognitionRegister(APIView):
     def post(self, request, ticket_id):
         image_base64 = request.data.get('image')
         if not image_base64:
-            logger.error("등록 실패: 이미지 미입력 user_id=%s, ticket_id=%s", request.user.id, ticket_id)
-            span = trace.get_current_span()
-            if span:
-                span.add_event("등록 실패: 이미지 미입력", {
-                    "user_id": request.user.id,
-                    "ticket_id": ticket_id,
-                })
             return Response({"message": "image가 필요합니다."}, status=400)
         try:
+            import base64, os, boto3
             image_bytes = base64.b64decode(image_base64)
             user_id = request.user.id
             external_image_id = f"user_{user_id}_ticket_{ticket_id}"
@@ -114,6 +96,7 @@ class AWSFaceRecognitionRegister(APIView):
                 region_name='ap-northeast-2'
             )
             collection_id = 'my-tickets'
+            # 중복 ExternalImageId 체크
             faces = []
             response = rekognition.list_faces(CollectionId=collection_id, MaxResults=60)
             faces.extend(response.get('Faces', []))
@@ -123,14 +106,8 @@ class AWSFaceRecognitionRegister(APIView):
                 faces.extend(response.get('Faces', []))
                 next_token = response.get('NextToken')
             if any(face.get('ExternalImageId') == external_image_id for face in faces):
-                logger.warning("중복 얼굴 등록 시도 user_id=%s, ticket_id=%s", user_id, ticket_id)
-                span = trace.get_current_span()
-                if span:
-                    span.add_event("중복 얼굴 등록 시도", {
-                        "user_id": user_id,
-                        "ticket_id": ticket_id,
-                    })
                 return Response({"message": "이미 등록된 얼굴이 있습니다. 중복 등록이 불가합니다.", "ExternalImageId": external_image_id}, status=400)
+            # 중복이 아니면 등록 진행
             response = rekognition.index_faces(
                 CollectionId=collection_id,
                 Image={'Bytes': image_bytes},
@@ -145,21 +122,8 @@ class AWSFaceRecognitionRegister(APIView):
                     "ExternalImageId": faces[0]['Face']['ExternalImageId']
                 }, status=200)
             else:
-                logger.error("등록 실패: FaceRecords 없음 user_id=%s, ticket_id=%s", user_id, ticket_id)
-                span = trace.get_current_span()
-                if span:
-                    span.add_event("등록 실패: FaceRecords 없음", {
-                        "user_id": user_id,
-                        "ticket_id": ticket_id,
-                    })
                 return Response({"message": "얼굴 등록 실패", "response": response}, status=400)
         except Exception as e:
-            logger.error("[AWSFaceRecognitionRegister] user_id=%s, ticket_id=%s, error=%s", request.user.id, ticket_id, str(e))
-            span = trace.get_current_span()
-            if span:
-                span.record_exception(e)
-                span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
-            send_slack_alert(f"[얼굴 등록 실패] user_id={request.user.id}, ticket_id={ticket_id}, error={str(e)}")
             return Response({"message": "AWS Rekognition 처리 중 오류", "error": str(e)}, status=500)
 
 # --- 2. AWS Rekognition 얼굴 인증 ---
@@ -220,18 +184,13 @@ class AWSFaceRecognitionAuth(APIView):
     )
     def post(self, request, ticket_id):
         image_base64 = request.data.get('image')
-        user_id = request.user.id
         if not image_base64:
-            logger.warning("얼굴 인증 실패: image 미입력 user_id=%s, ticket_id=%s", user_id, ticket_id)
-            span = trace.get_current_span()
-            if span:
-                span.add_event("얼굴 인증 실패: image 미입력", {
-                    "user_id": user_id,
-                    "ticket_id": ticket_id
-                })
             return Response({"message": "image가 필요합니다."}, status=400)
         try:
+            import base64, os, boto3
+            from .models import Ticket
             image_bytes = base64.b64decode(image_base64)
+            user_id = request.user.id
             external_image_id = f"user_{user_id}_ticket_{ticket_id}"
             rekognition = boto3.client(
                 'rekognition',
@@ -247,35 +206,20 @@ class AWSFaceRecognitionAuth(APIView):
                 FaceMatchThreshold=80
             )
             face_matches = response.get('FaceMatches', [])
-
+            # 1. 등록된 얼굴이 아예 없는 경우 (FaceMatches가 없음)
             if not face_matches:
-                logger.warning("얼굴 인증 실패: 등록된 얼굴 없음 user_id=%s, ticket_id=%s", user_id, ticket_id)
-                span = trace.get_current_span()
-                if span:
-                    span.add_event("얼굴 인증 실패: 등록된 얼굴 없음", {
-                        "user_id": user_id,
-                        "ticket_id": ticket_id
-                    })
                 return Response({"message": "등록된 얼굴이 없습니다. (등록된 FaceId 없음)", "Similarity": 0}, status=200)
-
+            # 2. ExternalImageId가 정확히 일치하는 것만 필터링
             filtered = [f for f in face_matches if f['Face'].get('ExternalImageId') == external_image_id]
             if filtered:
                 best = max(filtered, key=lambda f: f['Similarity'])
+                # 3. 유사도가 99.0% 미만이면 인증 실패(등록된 얼굴이지만 다른 사람)
                 if best['Similarity'] < 99.0:
-                    logger.warning("얼굴 인증 실패: 유사도 부족 user_id=%s, ticket_id=%s, similarity=%.2f", user_id, ticket_id, best['Similarity'])
-                    span = trace.get_current_span()
-                    if span:
-                        span.add_event("얼굴 인증 실패: 유사도 부족", {
-                            "user_id": user_id,
-                            "ticket_id": ticket_id,
-                            "similarity": best['Similarity']
-                        })
                     return Response({
                         "message": "얼굴이 일치하지 않습니다. (등록된 얼굴이지만 다른 사람)",
                         "Similarity": best['Similarity'],
                         "ExternalImageId": best['Face']['ExternalImageId']
                     }, status=200)
-                # 성공
                 return Response({
                     "message": "얼굴 인증 성공",
                     "FaceId": best['Face']['FaceId'],
@@ -283,26 +227,14 @@ class AWSFaceRecognitionAuth(APIView):
                     "Similarity": best['Similarity']
                 }, status=200)
             else:
+                # 4. 등록된 얼굴은 있으나 user_id/ticket_id가 다름 (다른 사람의 얼굴)
+                # 가장 유사한 Face의 ExternalImageId를 반환
                 best = max(face_matches, key=lambda f: f['Similarity'])
-                logger.warning("얼굴 인증 실패: 다른 사람의 얼굴 user_id=%s, ticket_id=%s, similarity=%.2f", user_id, ticket_id, best['Similarity'])
-                span = trace.get_current_span()
-                if span:
-                    span.add_event("얼굴 인증 실패: 다른 사람의 얼굴", {
-                        "user_id": user_id,
-                        "ticket_id": ticket_id,
-                        "similarity": best['Similarity']
-                    })
                 return Response({
                     "message": "해당 티켓에 등록되지 않은 사용자입니다.",
                     "Similarity": best['Similarity']
                 }, status=200)
         except Exception as e:
-            logger.error("[AWSFaceRecognitionAuth] user_id=%s, ticket_id=%s, error=%s", user_id, ticket_id, str(e))
-            span = trace.get_current_span()
-            if span:
-                span.record_exception(e)
-                span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
-            send_slack_alert(f"[얼굴 인증 실패] user_id={user_id}, ticket_id={ticket_id}, error={str(e)}")
             return Response({"message": "AWS Rekognition 처리 중 오류", "error": str(e)}, status=500)
 
 # --- 3. DB 기반 얼굴 등록 상태 변경 ---

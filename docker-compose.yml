@@ -13,23 +13,16 @@ services:
   web:
     image: ${DOCKERHUB_USERNAME}/ticket-backend:dev-latest
     container_name: django-backend
-    command: opentelemetry-instrument gunicorn ticket_backend.wsgi:application --bind 0.0.0.0:8000
+    command: gunicorn ticket_backend.wsgi:application --bind 0.0.0.0:8000
     ports:
       - "8000:8000"
     env_file:
       - .env
     depends_on:
       - db
-      - otel-collector
     volumes:
       - ./static:/app/static
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-      - OTEL_SERVICE_NAME=django-backend
-      - OTEL_TRACES_EXPORTER=otlp
-      - OTEL_METRICS_EXPORTER=otlp
-      - OTEL_LOGS_EXPORTER=otlp
       - DJANGO_SETTINGS_MODULE=ticket_backend.settings
 
   db:
@@ -107,44 +100,6 @@ services:
     volumes:
       - grafana-storage:/var/lib/grafana
 
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib
-    container_name: otel-collector
-    command: ["--config=/etc/otel-collector-config.yml"]
-    ports:
-      - "4317:4317"
-      - "4318:4318"
-      - "8889:8889"
-    volumes:
-      - ./monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml
-
-  tempo:
-    image: grafana/tempo:latest
-    container_name: tempo
-    command: ["-config.file=/etc/tempo.yaml"]
-    ports:
-      - "3200:3200"
-      - "4320:4320"
-    volumes:
-      - ./monitoring/tempo.yaml:/etc/tempo.yaml
-      - tempo-data:/tmp/tempo
-
-  loki:
-    image: grafana/loki:latest
-    container_name: loki
-    ports:
-      - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
-    user: root
-    volumes:
-      - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml
-      - loki-data:/loki
-      - loki-wal:/loki/wal
-
 volumes:
   mysql_data:
   grafana-storage:
-  tempo-data:
-  loki-data:
-  loki-wal:
-  loki-var:
