@@ -41,7 +41,7 @@ services:
   
   anti_spoofing_server:
     image: ${DOCKERHUB_USERNAME}/ticket-backend:dev-latest
-    context: ./anti_spoofing_server
+    #context: ./anti_spoofing_server
     container_name: anti_spoofing_server
     ports:
       - "5001:5001"
