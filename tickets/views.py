@@ -84,19 +84,47 @@ class AWSFaceRecognitionRegister(APIView):
         image_base64 = request.data.get('image')
         if not image_base64:
             return Response({"message": "image가 필요합니다."}, status=400)
+
         try:
-            import base64, os, boto3
+            import base64, os, boto3, requests
+
+            # 1. 이미지 디코딩
             image_bytes = base64.b64decode(image_base64)
             user_id = request.user.id
             external_image_id = f"user_{user_id}_ticket_{ticket_id}"
+
+            # 2. Anti-spoofing 서버에 먼저 검증 요청
+            ai_url = os.environ.get("AI_SERVER_URL")  # 예: http://anti-spoofing-server:8000
+            if not ai_url:
+                return Response({"message": "AI 서버 주소가 설정되어 있지 않습니다."}, status=500)
+
+            spoof_response = requests.post(
+                f"{ai_url}/predict",
+                json={"image": image_base64},
+                timeout=5
+            )
+
+            if spoof_response.status_code != 200:
+                return Response({"message": "안티스푸핑 서버 오류", "detail": spoof_response.text}, status=500)
+
+            spoof_result = spoof_response.json()
+            if spoof_result.get("label") != "real":
+                return Response({
+                   "message": "스푸핑된 얼굴로 확인되었습니다. 등록이 거부됩니다.",
+                   "score": spoof_result.get("score")
+                }, status=403)
+
+            # 3. AWS Rekognition 설정
             rekognition = boto3.client(
                 'rekognition',
                 aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
                 aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
                 region_name='ap-northeast-2'
             )
+
             collection_id = 'my-tickets'
-            # 중복 ExternalImageId 체크
+
+            # 4. 중복 ExternalImageId 체크
             faces = []
             response = rekognition.list_faces(CollectionId=collection_id, MaxResults=60)
             faces.extend(response.get('Faces', []))
@@ -105,15 +133,21 @@ class AWSFaceRecognitionRegister(APIView):
                 response = rekognition.list_faces(CollectionId=collection_id, NextToken=next_token, MaxResults=60)
                 faces.extend(response.get('Faces', []))
                 next_token = response.get('NextToken')
+
             if any(face.get('ExternalImageId') == external_image_id for face in faces):
-                return Response({"message": "이미 등록된 얼굴이 있습니다. 중복 등록이 불가합니다.", "ExternalImageId": external_image_id}, status=400)
-            # 중복이 아니면 등록 진행
+                return Response({
+                    "message": "이미 등록된 얼굴이 있습니다. 중복 등록이 불가합니다.",
+                    "ExternalImageId": external_image_id
+                }, status=400)
+
+            # 5. Rekognition에 얼굴 등록
             response = rekognition.index_faces(
                 CollectionId=collection_id,
                 Image={'Bytes': image_bytes},
                 ExternalImageId=external_image_id,
                 DetectionAttributes=['DEFAULT']
             )
+
             faces = response.get('FaceRecords', [])
             if faces:
                 return Response({
@@ -123,6 +157,7 @@ class AWSFaceRecognitionRegister(APIView):
                 }, status=200)
             else:
                 return Response({"message": "얼굴 등록 실패", "response": response}, status=400)
+
         except Exception as e:
             return Response({"message": "AWS Rekognition 처리 중 오류", "error": str(e)}, status=500)
 
