@@ -4,10 +4,6 @@ from dotenv import load_dotenv
 from datetime import timedelta
 import logging
 
-from opentelemetry.sdk._logs import LoggerProvider
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, OTLPLogExporter
-from opentelemetry._logs import set_logger_provider, get_logger
-
 DEBUG=True
 
 # .env 파일 로드
@@ -152,16 +148,3 @@ LOGGING = {
         'level': 'INFO',
     },
 }
-
-
-# OTLPLogExporter는 Collector로 로그를 전송
-provider = LoggerProvider()
-exporter = OTLPLogExporter(endpoint="http://otel-collector:4318/v1/logs")
-provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
-set_logger_provider(provider)
-
-# Python logging 연동
-import logging
-otel_logger = get_logger(__name__)
-logging.basicConfig(level=logging.INFO)
-logging.getLogger().addHandler(logging.StreamHandler())

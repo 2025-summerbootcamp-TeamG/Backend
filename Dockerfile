@@ -23,4 +23,4 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 COPY . .
 
 # 컨테이너가 시작될 때 실행할 명령어 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "ticket_backend.wsgi:application"]
+CMD ["opentelemetry-instrument","gunicorn", "--bind", "0.0.0.0:8000", "ticket_backend.wsgi:application"]
