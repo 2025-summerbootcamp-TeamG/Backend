@@ -13,8 +13,8 @@ services:
       - ./static:/static  # 추가: 호스트의 static 폴더를 nginx 컨테이너에 마운트
 
   web:
-    image: ${DOCKERHUB_USERNAME}/ticket-backend:dev-latest
-    #build: .
+    #image: ${DOCKERHUB_USERNAME}/ticket-backend:dev-latest
+    build: .
     container_name: django-backend
     command: gunicorn ticket_backend.wsgi:application --bind 0.0.0.0:8000
     ports:
@@ -43,14 +43,23 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
   
+  anti_spoofing_server:
+    build:
+      context: ./anti_spoofing_server
+    container_name: anti_spoofing_server
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./anti_spoofing_server/static/uploads:/app/static/uploads
+
   redis:
     image: redis
     ports:
       - "6379:6379"
 
   celery:
-    image: ${DOCKERHUB_USERNAME}/ticket-backend:dev-latest
-    #build: .
+    #image: ${DOCKERHUB_USERNAME}/ticket-backend:dev-latest
+    build: .
     command: celery -A ticket_backend worker --loglevel=info
     depends_on:
       - redis
