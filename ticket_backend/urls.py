@@ -14,6 +14,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+from .metrics import metrics_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -49,7 +50,8 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/docs/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-
+    path('metrics/', metrics_view, name='metrics'),
+    path('', include('django_prometheus.urls')),
 ]
 
 if settings.DEBUG:

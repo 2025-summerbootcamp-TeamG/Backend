@@ -1,0 +1,20 @@
+groups:
+  - name: face_recognition_alerts
+    rules:
+      - alert: FaceRegisterFailure
+        expr: increase(face_register_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "얼굴 등록 실패 발생"
+          description: "최근 5분 동안 얼굴 등록 실패가 {{ $value }}회 발생했습니다."
+
+      - alert: FaceAuthFailure
+        expr: increase(face_auth_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "얼굴 인증 실패 발생"
+          description: "최근 5분 동안 얼굴 인증 실패가 {{ $value }}회 발생했습니다."

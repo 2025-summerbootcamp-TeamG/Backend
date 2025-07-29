@@ -3,7 +3,6 @@ from pathlib import Path
 from dotenv import load_dotenv  
 from datetime import timedelta
 
-
 DEBUG=True
 
 # .env 파일 로드
@@ -37,6 +36,9 @@ INSTALLED_APPS = [
     'tickets',  # tickets 앱 추가
     'user',
     'events',
+    
+    # 아래 django-prometheus 앱 추가 (주석처리된 경우 설치필요)
+    'django_prometheus', 
 ]
 
 SIMPLE_JWT = {
@@ -53,11 +55,12 @@ REST_FRAMEWORK = {
 }
 
 
-
 AUTH_USER_MODEL = 'user.User'
 
 # 미들웨어
 MIDDLEWARE = [
+    # 아래 두 줄은 prometheus 미들웨어를 넣기 위해 기존 맨 앞과 맨 뒤에 추가 (필요시 위치 조정)
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',  # 추가: prometheus 요청 전처리 미들웨어
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -65,6 +68,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',  # 추가: prometheus 요청 후처리 미들웨어
 ]
 
 ROOT_URLCONF = 'ticket_backend.urls'
@@ -97,7 +101,6 @@ DATABASES = {
     }
 }
 
-
 # 비밀번호 정책 (기본 유지)
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -125,7 +128,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # AWS Rekognition용 환경변수 불러오기
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
-
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'TeamG Face Ticketing API',

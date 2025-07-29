@@ -16,3 +16,4 @@ qrcode
 celery
 redis
 prometheus-client #Optional: Prometheus client 직접 사용 시 (예: 커스텀 메트릭 수동 기록)
+django-prometheus
