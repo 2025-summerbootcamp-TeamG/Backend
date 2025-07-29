@@ -50,6 +50,32 @@ face_auth_failures_total = Counter(
     ['reason']
 )
 
+def resize_to_4_3(image_bytes):
+    with Image.open(io.BytesIO(image_bytes)) as img:
+        original_width, original_height = img.size
+        target_ratio = 4 / 3
+
+        current_ratio = original_width / original_height
+
+        if current_ratio > target_ratio:
+            # 좌우 크롭
+            new_width = int(original_height * target_ratio)
+            offset = (original_width - new_width) // 2
+            img = img.crop((offset, 0, offset + new_width, original_height))
+        elif current_ratio < target_ratio:
+            # 상하 크롭
+            new_height = int(original_width / target_ratio)
+            offset = (original_height - new_height) // 2
+            img = img.crop((0, offset, original_width, offset + new_height))
+
+        # 최종 리사이즈
+        img = img.resize((800, 600))  # 또는 원하는 사이즈
+
+        output_buffer = io.BytesIO()
+        img.save(output_buffer, format="JPEG")
+        return output_buffer.getvalue()
+
+
 
 ###############################################
 # 얼굴 관련 API 모음 (등록/인증/상태조회/DB/AWS)
@@ -108,7 +134,24 @@ class AWSFaceRecognitionRegister(APIView):
             return Response({"message": "image가 필요합니다."}, status=400)
 
         try:
+            # 1. 원본 base64 디코딩
             image_bytes = base64.b64decode(image_base64)
+
+            # 2. 원본을 PIL 이미지로 로드
+            image = Image.open(io.BytesIO(image_bytes))
+
+            # 3. 4:3 비율로 리사이즈
+            target_width = 800
+            target_height = int(target_width * 3 / 4)
+            resized_image = image.resize((target_width, target_height))
+
+            # 4. 리사이즈된 이미지 → 바이트 → base64
+            resized_io = io.BytesIO()
+            resized_image.save(resized_io, format='JPEG')
+            resized_bytes = resized_io.getvalue()
+            resized_base64 = base64.b64encode(resized_bytes).decode('utf-8')
+
+
             user_id = request.user.id
             external_image_id = f"user_{user_id}_ticket_{ticket_id}"
 
@@ -116,11 +159,11 @@ class AWSFaceRecognitionRegister(APIView):
             if not ai_url:
                 return Response({"message": "AI 서버 주소가 설정되어 있지 않습니다."}, status=500)
             
-            logger.debug(f"[AI 요청 base64 전체] user_id={user_id}, ticket_id={ticket_id}\n{image_base64}")
+            logger.debug(f"[AI 요청 base64 전체] user_id={user_id}, ticket_id={ticket_id}\n{resized_base64}")
 
             spoof_response = requests.post(
                 f"{ai_url}/predict",
-                json={"image": image_base64},
+                json={"image": resized_base64},
                 timeout=5
             )
             logger.debug(f"[AI 응답 전체] status={spoof_response.status_code}, response={spoof_response.text}")
