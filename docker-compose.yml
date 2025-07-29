@@ -111,16 +111,17 @@ services:
     volumes:
       - grafana-storage:/var/lib/grafana
 
+  alertmanager:
+    image: prom/alertmanager
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+
 volumes:
   mysql_data:
   grafana-storage:
 
-alertmanager:
-  image: prom/alertmanager
-  container_name: alertmanager
-  ports:
-    - "9093:9093"
-  volumes:
-    - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
-  environment:
-    - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
