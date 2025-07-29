@@ -14,4 +14,18 @@ scrape_configs:
     static_configs:
       - targets: ['cadvisor:8080']
 
+  - job_name: 'django_app'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['django-backend:8000']
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'alertmanager:9093'  # Alertmanager가 실행 중인 주소
+
+rule_files:
+  - 'alert_rules.yml'  # 알림 룰이 담긴 파일
+
   

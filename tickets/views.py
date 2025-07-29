@@ -1,40 +1,50 @@
-from django.shortcuts import render
-
+from django.shortcuts import render, get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
-from .models import Ticket
-from .serializers import TicketDetailSerializer, TicketListSerializer
-from django.shortcuts import get_object_or_404
-from django.db import connection
-from django.db import transaction
-from user.models import User  
-import boto3
-import base64
-import io
-from PIL import Image
-import os
-import requests
+from django.db import connection, transaction
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiTypes, OpenApiExample
 from django.http import JsonResponse
+import boto3
+import base64
+import os
+import requests
 import qrcode
 from io import BytesIO
-from .serializers import TicketCertificationSerializer
+from PIL import Image
+
+from .models import Ticket
+from .serializers import (
+    TicketDetailSerializer,
+    TicketListSerializer,
+    TicketCertificationSerializer,
+)
 from tickets.tasks import auto_cancel_ticket
+from user.models import User
+
+
+from prometheus_client import Counter
+
+face_register_failures_total = Counter(
+    'face_register_failures_total',
+    'Total number of face registration failures',
+    ['reason']
+)
+
+face_auth_failures_total = Counter(
+    'face_auth_failures_total',
+    'Total number of face authentication failures',
+    ['reason']
+)
+
 
 ###############################################
 # 얼굴 관련 API 모음 (등록/인증/상태조회/DB/AWS)
 ###############################################
 
-# --- 1. AWS Rekognition 얼굴 등록 ---
-# [POST] /api/v1/tickets/<ticket_id>/aws-register/
-# - JWT 토큰 인증 필요
-# - base64 이미지(image) 전달
-# - AWS Rekognition에 user_{user_id}_ticket_{ticket_id}로 등록
-# - 성공 시 FaceId, ExternalImageId 반환
 @extend_schema(tags=["tickets"])
 class AWSFaceRecognitionRegister(APIView):
     authentication_classes = [JWTAuthentication]
@@ -83,18 +93,16 @@ class AWSFaceRecognitionRegister(APIView):
     def post(self, request, ticket_id):
         image_base64 = request.data.get('image')
         if not image_base64:
+            # [변경] 이미지 누락 실패 카운터 증가
+            face_register_failures_total.labels(reason='no_image').inc()
             return Response({"message": "image가 필요합니다."}, status=400)
 
         try:
-            import base64, os, boto3, requests
-
-            # 1. 이미지 디코딩
             image_bytes = base64.b64decode(image_base64)
             user_id = request.user.id
             external_image_id = f"user_{user_id}_ticket_{ticket_id}"
 
-            # 2. Anti-spoofing 서버에 먼저 검증 요청
-            ai_url = os.environ.get("AI_SERVER_URL")  # 예: http://anti-spoofing-server:8000
+            ai_url = os.environ.get("AI_SERVER_URL")
             if not ai_url:
                 return Response({"message": "AI 서버 주소가 설정되어 있지 않습니다."}, status=500)
 
@@ -109,12 +117,13 @@ class AWSFaceRecognitionRegister(APIView):
 
             spoof_result = spoof_response.json()
             if spoof_result.get("label") != "real":
+                
+                face_register_failures_total.labels(reason='spoofing_detected').inc()
                 return Response({
                    "message": "스푸핑된 얼굴로 확인되었습니다. 등록이 거부됩니다.",
                    "score": spoof_result.get("score")
                 }, status=403)
 
-            # 3. AWS Rekognition 설정
             rekognition = boto3.client(
                 'rekognition',
                 aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
@@ -124,7 +133,6 @@ class AWSFaceRecognitionRegister(APIView):
 
             collection_id = 'my-tickets'
 
-            # 4. 중복 ExternalImageId 체크
             faces = []
             response = rekognition.list_faces(CollectionId=collection_id, MaxResults=60)
             faces.extend(response.get('Faces', []))
@@ -135,12 +143,13 @@ class AWSFaceRecognitionRegister(APIView):
                 next_token = response.get('NextToken')
 
             if any(face.get('ExternalImageId') == external_image_id for face in faces):
+                
+                face_register_failures_total.labels(reason='duplicate_face').inc()
                 return Response({
                     "message": "이미 등록된 얼굴이 있습니다. 중복 등록이 불가합니다.",
                     "ExternalImageId": external_image_id
                 }, status=400)
 
-            # 5. Rekognition에 얼굴 등록
             response = rekognition.index_faces(
                 CollectionId=collection_id,
                 Image={'Bytes': image_bytes},
@@ -156,17 +165,16 @@ class AWSFaceRecognitionRegister(APIView):
                     "ExternalImageId": faces[0]['Face']['ExternalImageId']
                 }, status=200)
             else:
+                
+                face_register_failures_total.labels(reason='rekognition_no_face_records').inc()
                 return Response({"message": "얼굴 등록 실패", "response": response}, status=400)
 
         except Exception as e:
+            
+            face_register_failures_total.labels(reason='exception').inc()
             return Response({"message": "AWS Rekognition 처리 중 오류", "error": str(e)}, status=500)
 
-# --- 2. AWS Rekognition 얼굴 인증 ---
-# [POST] /api/v1/tickets/<ticket_id>/aws-auth/
-# - JWT 토큰 인증 필요
-# - base64 이미지(image) 전달
-# - AWS Rekognition에서 user_{user_id}_ticket_{ticket_id}로 등록된 얼굴과만 비교
-# - 성공 시 FaceId, ExternalImageId, Similarity 반환
+
 @extend_schema(tags=["tickets"])
 class AWSFaceRecognitionAuth(APIView):
     authentication_classes = [JWTAuthentication]
@@ -220,10 +228,11 @@ class AWSFaceRecognitionAuth(APIView):
     def post(self, request, ticket_id):
         image_base64 = request.data.get('image')
         if not image_base64:
+            
+            face_auth_failures_total.labels(reason='no_image').inc()
             return Response({"message": "image가 필요합니다."}, status=400)
         try:
             import base64, os, boto3
-            from .models import Ticket
             image_bytes = base64.b64decode(image_base64)
             user_id = request.user.id
             external_image_id = f"user_{user_id}_ticket_{ticket_id}"
@@ -241,15 +250,17 @@ class AWSFaceRecognitionAuth(APIView):
                 FaceMatchThreshold=80
             )
             face_matches = response.get('FaceMatches', [])
-            # 1. 등록된 얼굴이 아예 없는 경우 (FaceMatches가 없음)
             if not face_matches:
+                # [변경] 등록된 얼굴 없음 실패 카운터 증가
+                face_auth_failures_total.labels(reason='no_registered_faces').inc()
                 return Response({"message": "등록된 얼굴이 없습니다. (등록된 FaceId 없음)", "Similarity": 0}, status=200)
-            # 2. ExternalImageId가 정확히 일치하는 것만 필터링
+
             filtered = [f for f in face_matches if f['Face'].get('ExternalImageId') == external_image_id]
             if filtered:
                 best = max(filtered, key=lambda f: f['Similarity'])
-                # 3. 유사도가 99.0% 미만이면 인증 실패(등록된 얼굴이지만 다른 사람)
                 if best['Similarity'] < 99.0:
+                    # [변경] 유사도 낮음 실패 카운터 증가
+                    face_auth_failures_total.labels(reason='low_similarity').inc()
                     return Response({
                         "message": "얼굴이 일치하지 않습니다. (등록된 얼굴이지만 다른 사람)",
                         "Similarity": best['Similarity'],
@@ -262,15 +273,18 @@ class AWSFaceRecognitionAuth(APIView):
                     "Similarity": best['Similarity']
                 }, status=200)
             else:
-                # 4. 등록된 얼굴은 있으나 user_id/ticket_id가 다름 (다른 사람의 얼굴)
-                # 가장 유사한 Face의 ExternalImageId를 반환
+                
+                face_auth_failures_total.labels(reason='mismatched_external_id').inc()
                 best = max(face_matches, key=lambda f: f['Similarity'])
                 return Response({
                     "message": "해당 티켓에 등록되지 않은 사용자입니다.",
                     "Similarity": best['Similarity']
                 }, status=200)
         except Exception as e:
+            
+            face_auth_failures_total.labels(reason='exception').inc()
             return Response({"message": "AWS Rekognition 처리 중 오류", "error": str(e)}, status=500)
+
 
 # --- 3. DB 기반 얼굴 등록 상태 변경 ---
 # [PATCH] /api/v1/tickets/<ticket_id>/register/

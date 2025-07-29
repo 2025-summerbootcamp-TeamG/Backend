@@ -101,6 +101,7 @@ services:
       - "9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml
 
   grafana:
     image: grafana/grafana
@@ -113,3 +114,13 @@ services:
 volumes:
   mysql_data:
   grafana-storage:
+
+alertmanager:
+  image: prom/alertmanager
+  container_name: alertmanager
+  ports:
+    - "9093:9093"
+  volumes:
+    - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+  environment:
+    - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
