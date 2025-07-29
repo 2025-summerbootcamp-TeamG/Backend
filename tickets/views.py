@@ -13,6 +13,7 @@ import base64
 import os
 import requests
 import qrcode
+import logging
 from io import BytesIO
 from PIL import Image
 
@@ -24,6 +25,15 @@ from .serializers import (
 )
 from tickets.tasks import auto_cancel_ticket
 from user.models import User
+
+# 로깅 설정 (한 번만 설정해두면 됨)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # 로그 레벨 조절 가능
+handler = logging.StreamHandler()
+formatter = logging.Formatter('[%(asctime)s] %(levelname)s in %(name)s: %(message)s')
+handler.setFormatter(formatter)
+if not logger.hasHandlers():
+    logger.addHandler(handler)
 
 
 from prometheus_client import Counter
@@ -105,13 +115,15 @@ class AWSFaceRecognitionRegister(APIView):
             ai_url = os.environ.get("AI_SERVER_URL")
             if not ai_url:
                 return Response({"message": "AI 서버 주소가 설정되어 있지 않습니다."}, status=500)
+            
+            logger.debug(f"[AI 요청 base64 전체] user_id={user_id}, ticket_id={ticket_id}\n{image_base64}")
 
             spoof_response = requests.post(
                 f"{ai_url}/predict",
                 json={"image": image_base64},
                 timeout=5
             )
-
+            logger.debug(f"[AI 응답 전체] status={spoof_response.status_code}, response={spoof_response.text}")
             if spoof_response.status_code != 200:
                 return Response({"message": "안티스푸핑 서버 오류", "detail": spoof_response.text}, status=500)
 
