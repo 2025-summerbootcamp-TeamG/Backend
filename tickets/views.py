@@ -14,6 +14,7 @@ import os
 import requests
 import qrcode
 import logging
+import io
 from io import BytesIO
 from PIL import Image
 
@@ -179,10 +180,18 @@ class AWSFaceRecognitionRegister(APIView):
                    "score": spoof_result.get("score")
                 }, status=403)
 
+            # AWS 자격 증명 확인
+            aws_access_key = os.environ.get('AWS_ACCESS_KEY_ID')
+            aws_secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+            
+            if not aws_access_key or not aws_secret_key:
+                logger.error("AWS 자격 증명이 설정되지 않았습니다.")
+                return Response({"message": "AWS 자격 증명이 설정되지 않았습니다."}, status=500)
+            
             rekognition = boto3.client(
                 'rekognition',
-                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
-                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key,
                 region_name='ap-northeast-2'
             )
 
@@ -225,6 +234,9 @@ class AWSFaceRecognitionRegister(APIView):
                 return Response({"message": "얼굴 등록 실패", "response": response}, status=400)
 
         except Exception as e:
+            logger.error(f"AWS Rekognition 오류 발생: {str(e)}")
+            logger.error(f"오류 타입: {type(e).__name__}")
+            logger.error(f"사용자 ID: {user_id}, 티켓 ID: {ticket_id}")
             
             face_register_failures_total.labels(reason='exception').inc()
             return Response({"message": "AWS Rekognition 처리 중 오류", "error": str(e)}, status=500)
