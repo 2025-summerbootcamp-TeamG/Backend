@@ -93,7 +93,7 @@ class AntiSpoofPredict(Detection):
 
 def check_image(image):
     height, width, _ = image.shape
-    return abs(width / height - 3 / 4) <= 0.01
+    return abs(width / height - 4 / 3) <= 0.05
 
 
 def predict_image(image_path, model_dir="./resources/anti_spoof_models", device_id=0):

@@ -141,9 +141,9 @@ class AWSFaceRecognitionRegister(APIView):
             # 2. 원본을 PIL 이미지로 로드
             image = Image.open(io.BytesIO(image_bytes))
 
-            # 3. 4:3 비율로 리사이즈
+            # 3. 정확한 4:3 비율로 리사이즈
             target_width = 800
-            target_height = int(target_width * 3 / 4)
+            target_height = 600  # 정확한 4:3 비율 (800/600 = 4/3)
             resized_image = image.resize((target_width, target_height))
 
             # 4. 리사이즈된 이미지 → 바이트 → base64
