@@ -28,8 +28,16 @@ def predict():
         filename = f"{uuid.uuid4().hex}.jpg"
         filepath = os.path.join(UPLOAD_FOLDER, filename)
 
+        # 이미지 저장
+        with open(filepath, 'wb') as f:
+            f.write(image_data)
+        
         # 이미지 예측
         result = predict_image(filepath)
+    
+        # 이미지 파일 삭제
+        os.remove(filepath)
+
         return jsonify(result)
 
     except Exception as e:
